@@ -103,6 +103,20 @@ riêng, xem `api-context.md`.
   `screen-inventory.md` (ghi chú cross-cutting). Bump `v0.2.0 → v0.3.0`. ⚠️ Đồng bộ
   mobile khi freeze #000.
 
+### Fixed
+- **Google social-login trả 500 thay vì 400** (phát hiện khi curl end-to-end): dep
+  `requests` thiếu — `google.auth.transport.requests` cần nó nhưng `google-auth`
+  không kéo về; import nằm ngoài try/except nên `ImportError` → 500. Bug BE-001 tiềm
+  ẩn (test mock `verify_social_token` nên đường verify thật chưa từng chạy). Thêm
+  `requests==2.34.2` vào `requirements/base.txt`. Nay token sai → `400
+  SOCIAL_TOKEN_INVALID` đúng chuẩn.
+- **Catalog trending trả rỗng** (phát hiện khi curl thật lúc review BE-004): Jamendo
+  order `popularity_month`/`popularity_week` trả 0 kết quả ở free tier. Chuyển
+  `JAMENDO_TRENDING_ORDER` từ hằng số `constants.py` → **settings env-driven**
+  (`config/settings/base.py`, default `popularity_total` — hoạt động), cập nhật
+  `jamendo.py` đọc từ settings + `.env.example`. `/catalog/trending` nay trả 50 track
+  thật. Không breaking (Constitution VI: tunable env-driven).
+
 ### Status
 - Contract **`v0.3.0`** (draft) chờ freeze #000 cùng repo mobile. BE-001 + BE-002
   + **BE-003 (User Library) đã merge vào `main`** (PR #3, commit `9c7a87f`; kèm

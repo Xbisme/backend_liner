@@ -15,7 +15,7 @@ from typing import Any
 import httpx
 from django.conf import settings
 
-from apps.catalog.constants import JAMENDO_TRACK_INCLUDE, JAMENDO_TRENDING_ORDER
+from apps.catalog.constants import JAMENDO_TRACK_INCLUDE
 from core.errors import ErrorCode
 from core.exceptions import AppError
 
@@ -113,7 +113,7 @@ def list_tracks(
 def trending(*, tag: str | None = None, size: int = 50) -> list[dict[str, Any]]:
     params: dict[str, Any] = {
         "limit": size,
-        "order": JAMENDO_TRENDING_ORDER,
+        "order": settings.JAMENDO_TRENDING_ORDER,
         "audioformat": settings.JAMENDO_AUDIOFORMAT,
         "include": JAMENDO_TRACK_INCLUDE,
     }

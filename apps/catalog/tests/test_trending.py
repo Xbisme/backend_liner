@@ -44,7 +44,7 @@ def test_trending_genre_filter_maps_to_tags(api, jamendo):
     resp = api.get("/catalog/trending?genre=electronic")
     assert resp.status_code == 200
     assert seen["tags"] == "electronic"
-    assert seen["order"] == "popularity_month"
+    assert seen["order"] == "popularity_total"  # env-driven default (BE-004 fix)
 
 
 def test_trending_unknown_genre_is_validation_error_before_upstream(api, jamendo):

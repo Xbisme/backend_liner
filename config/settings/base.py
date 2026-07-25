@@ -161,6 +161,9 @@ JAMENDO_REQUEST_TIMEOUT_SECONDS = env.float(
     "JAMENDO_REQUEST_TIMEOUT_SECONDS", default=5.0
 )
 JAMENDO_AUDIOFORMAT = env("JAMENDO_AUDIOFORMAT", default="mp31")
+# Trending sort order. Jamendo's time-windowed popularity_month/week return empty
+# on the free tier → default to the reliable all-time popularity (env-overridable).
+JAMENDO_TRENDING_ORDER = env("JAMENDO_TRENDING_ORDER", default="popularity_total")
 
 # Cache TTLs (seconds) — differ by volatility (Principle IV).
 CACHE_TTL_TRENDING = env.int("CACHE_TTL_TRENDING", default=3600)

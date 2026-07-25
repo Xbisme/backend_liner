@@ -3,6 +3,9 @@ Django==5.2.16
 djangorestframework==3.17.1
 djangorestframework-simplejwt==5.5.1
 google-auth==2.56.2
+# Required by google.auth.transport.requests (Google ID-token verify); google-auth
+# does not pull it in automatically. PyPI 2026-07-25.
+requests==2.34.2
 PyJWT==2.13.0
 cryptography==49.0.0
 django-environ==0.14.0
