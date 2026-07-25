@@ -34,7 +34,7 @@ components:
     LimitParam:
       name: limit
       in: query
-      schema: { type: integer, default: 20, maximum: 100 }
+      schema: { type: integer, default: 20, maximum: 50 }
 
   schemas:
     Artist:
@@ -360,7 +360,7 @@ paths:
 
   /catalog/artists/{id}:
     get:
-      summary: Chi tiết nghệ sĩ + danh sách track
+      summary: Chi tiết nghệ sĩ
       parameters:
         - name: id
           in: path
@@ -369,12 +369,15 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Artist' }
         '404':
           description: Not found
 
   /catalog/albums/{id}:
     get:
-      summary: Chi tiết album + danh sách track
+      summary: Chi tiết album
       parameters:
         - name: id
           in: path
@@ -383,6 +386,9 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Album' }
         '404':
           description: Not found
 

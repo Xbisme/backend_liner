@@ -1,7 +1,7 @@
 # SoundWave Backend v1.0 — Spec Roadmap
 
 > Repo: `soundwave-backend`. Track song song bên `soundwave-mobile` (spec `MO-NNN`).
-> Last updated: 2026-07-24 (Chưa có spec nào merge)
+> Last updated: 2026-07-25 (BE-001 merged; BE-002 Catalog Proxy triển khai xong, chờ merge)
 
 ## Dependency Graph
 
@@ -47,6 +47,7 @@ BE-005: Deploy & Launch Support
 - **Scope**: Django+DRF skeleton; `apps/accounts` (User model, email/password auth, JWT access+refresh); verify Google ID token (`google-auth`) và Apple Sign-In (`python-jose` verify JWS từ Apple); `POST /auth/register|login|social-login|refresh|logout`; middleware `X-App-Key`.
 
 ### BE-002: Catalog Proxy
+- **Status**: ✅ Triển khai xong (branch `BE-002-catalog-proxy`) — chờ merge. Xem `changelog.md`.
 - **Branch**: `BE-002-catalog-proxy`
 - **Depends on**: BE-001
 - **Scope**: `apps/catalog` — client wrapper gọi Jamendo API (client_id riêng, không lộ ra client); cache Redis (TTL khác nhau: `trending`/`genres` cache dài, `search` cache ngắn); map response Jamendo sang schema `Track`/`Artist`/`Album` trong `openapi.yaml`; xử lý `502 CATALOG_UPSTREAM_ERROR` khi Jamendo timeout/rate-limit.

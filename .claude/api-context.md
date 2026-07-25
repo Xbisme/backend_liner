@@ -84,7 +84,7 @@ Format chung: `{ "error": { "code": "...", "message": "..." } }`
 - **200**: `[{ "slug": "ambient", "name": "Ambient" }]`
 
 ### `GET /catalog/tracks`
-- Header: `X-App-Key` · Query: `cursor`, `limit`, `search`, `genre`
+- Header: `X-App-Key` · Query: `cursor`, `limit` (mặc định 20, tối đa 50 — số nguyên ngoài khoảng bị clamp, không phải số nguyên → `VALIDATION_ERROR`), `search` (khớp tên bài + nghệ sĩ), `genre` (slug thuộc danh mục curated, sai → `VALIDATION_ERROR`)
 - **200**: `TrackCursorPage`
 ```json
 {

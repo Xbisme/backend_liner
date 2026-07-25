@@ -3,7 +3,7 @@
 > Repo: `soundwave-backend` (Django + DRF)
 > Repo liên quan: `soundwave-mobile` (Flutter) — độc lập, đồng bộ qua `contracts/openapi.yaml` + `.claude/api-context.md`
 >
-> Last updated: 2026-07-25 (Constitution v1.0.0 đã chốt; scaffolding repo xong — chưa có spec nào triển khai)
+> Last updated: 2026-07-25 (BE-001 merged; BE-002 Catalog Proxy triển khai xong, chờ merge)
 
 ## Snapshot
 
@@ -17,13 +17,13 @@
 
 ## Current Focus
 
-- **Trạng thái**: Repo đã có nền tảng tài liệu + constitution v1.0.0, chưa merge spec code nào.
+- **Trạng thái**: BE-001 (Auth) đã merge. **BE-002 (Catalog Proxy) triển khai xong** trên branch `BE-002-catalog-proxy`, chờ merge — `apps/catalog` proxy + cache Jamendo, 6 endpoint `/catalog/*`, 39 test mới.
 - **Đã có sẵn**: `docs/screen-inventory.md`, `contracts/openapi.yaml` v0.1.0, `.claude/api-context.md` v0.1.0 (draft, chờ review cùng phía mobile), `.specify/memory/constitution.md` v1.0.0, `.claude/dev-workflow.md`, `.claude/changelog.md`, `.claude/decisions/`.
-- **Spec tiếp theo**: freeze contract #000 → `BE-001-backend-foundation`.
+- **Spec tiếp theo**: merge BE-002 (báo mobile MO-002) → `BE-003-user-library`.
+- **Đã quyết định**: Jamendo client_id thật (đã cấu hình trong `.env`); cache TTL theo loại (`CACHE_TTL_*` trong settings); genres = danh sách curated trong settings (`CATALOG_GENRES`).
 - **Chưa quyết định**:
-  - Đăng ký Jamendo API client_id thật (cần trước `BE-002`).
-  - Google/Apple Sign-In credentials (OAuth client ID, Apple Service ID) — cần trước `BE-001` để cấu hình verify token.
-  - Chiến lược cache Redis cụ thể (TTL cho từng loại endpoint catalog).
+  - Google/Apple Sign-In credentials thật cho production (hiện `.env` để placeholder).
+  - Freeze contract #000 chính thức cùng repo mobile (gồm 2 refinement pre-freeze: `User.email` nullable + `LimitParam` max 50).
 
 ## Repo Layout
 

@@ -1,0 +1,59 @@
+"""Thin catalog views — delegate to services + serializers (Principle III).
+
+Auth is Layer-1 only: ``X-App-Key`` is enforced globally by ``AppKeyMiddleware``;
+no user token is required (public content). Errors flow through the shared handler.
+"""
+
+from __future__ import annotations
+
+from rest_framework.request import Request
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from apps.catalog import genres as genre_helper
+from apps.catalog.serializers import (
+    AlbumSerializer,
+    ArtistSerializer,
+    GenreSerializer,
+    TrackCursorPageSerializer,
+    TrackSerializer,
+)
+from apps.catalog.services import catalog
+
+
+class TrendingView(APIView):
+    def get(self, request: Request) -> Response:
+        genre = request.query_params.get("genre")
+        tracks = catalog.trending(genre_slug=genre)
+        return Response(TrackSerializer(tracks, many=True).data)
+
+
+class GenresView(APIView):
+    def get(self, request: Request) -> Response:
+        return Response(GenreSerializer(genre_helper.list_genres(), many=True).data)
+
+
+class TracksView(APIView):
+    def get(self, request: Request) -> Response:
+        page = catalog.list_tracks(
+            search=request.query_params.get("search"),
+            genre_slug=request.query_params.get("genre"),
+            cursor=request.query_params.get("cursor"),
+            limit=request.query_params.get("limit"),
+        )
+        return Response(TrackCursorPageSerializer(page).data)
+
+
+class TrackDetailView(APIView):
+    def get(self, request: Request, track_id: str) -> Response:
+        return Response(TrackSerializer(catalog.get_track(track_id)).data)
+
+
+class ArtistDetailView(APIView):
+    def get(self, request: Request, artist_id: str) -> Response:
+        return Response(ArtistSerializer(catalog.get_artist(artist_id)).data)
+
+
+class AlbumDetailView(APIView):
+    def get(self, request: Request, album_id: str) -> Response:
+        return Response(AlbumSerializer(catalog.get_album(album_id)).data)

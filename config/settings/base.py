@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt.token_blacklist",
     "apps.accounts",
+    "apps.catalog",
 ]
 
 MIDDLEWARE = [
@@ -124,6 +125,48 @@ SIMPLE_JWT = {
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "user_id",
 }
+
+# --- Catalog proxy (Jamendo) — BE-002 (Constitution IV/VI) -------------------
+# Upstream credential + endpoint; client_id is never exposed to API clients.
+JAMENDO_CLIENT_ID = env("JAMENDO_CLIENT_ID", default="")
+JAMENDO_API_BASE_URL = env(
+    "JAMENDO_API_BASE_URL", default="https://api.jamendo.com/v3.0"
+)
+JAMENDO_REQUEST_TIMEOUT_SECONDS = env.float(
+    "JAMENDO_REQUEST_TIMEOUT_SECONDS", default=5.0
+)
+JAMENDO_AUDIOFORMAT = env("JAMENDO_AUDIOFORMAT", default="mp31")
+
+# Cache TTLs (seconds) — differ by volatility (Principle IV).
+CACHE_TTL_TRENDING = env.int("CACHE_TTL_TRENDING", default=3600)
+CACHE_TTL_GENRES = env.int("CACHE_TTL_GENRES", default=86400)
+CACHE_TTL_SEARCH = env.int("CACHE_TTL_SEARCH", default=120)
+CACHE_TTL_DETAIL = env.int("CACHE_TTL_DETAIL", default=1800)
+
+# Response sizing / paging bounds.
+CATALOG_TRENDING_SIZE = env.int("CATALOG_TRENDING_SIZE", default=50)
+CATALOG_TRACKS_PAGE_SIZE_DEFAULT = env.int(
+    "CATALOG_TRACKS_PAGE_SIZE_DEFAULT", default=20
+)
+CATALOG_TRACKS_PAGE_SIZE_MAX = env.int("CATALOG_TRACKS_PAGE_SIZE_MAX", default=50)
+
+# Curated genre vocabulary (Jamendo has no genre-list endpoint — research §6).
+# Each entry: {slug (public), name (display), tag (internal Jamendo filter value)}.
+# ``tag`` is never serialized out. Overridable via env at deploy time if needed.
+CATALOG_GENRES = [
+    {"slug": "electronic", "name": "Electronic", "tag": "electronic"},
+    {"slug": "pop", "name": "Pop", "tag": "pop"},
+    {"slug": "rock", "name": "Rock", "tag": "rock"},
+    {"slug": "hiphop", "name": "Hip-Hop", "tag": "hiphop"},
+    {"slug": "jazz", "name": "Jazz", "tag": "jazz"},
+    {"slug": "classical", "name": "Classical", "tag": "classical"},
+    {"slug": "metal", "name": "Metal", "tag": "metal"},
+    {"slug": "lounge", "name": "Lounge", "tag": "lounge"},
+    {"slug": "soundtrack", "name": "Soundtrack", "tag": "soundtrack"},
+    {"slug": "songwriter", "name": "Songwriter", "tag": "songwriter"},
+    {"slug": "world", "name": "World", "tag": "world"},
+    {"slug": "relaxation", "name": "Relaxation", "tag": "relaxation"},
+]
 
 # --- Social providers --------------------------------------------------------
 GOOGLE_OAUTH_CLIENT_ID = env("GOOGLE_OAUTH_CLIENT_ID", default="")
