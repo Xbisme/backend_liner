@@ -12,4 +12,5 @@ urlpatterns = [
     path("health", health, name="health"),
     path("", include("apps.accounts.urls")),
     path("", include("apps.catalog.urls")),
+    path("", include("apps.library.urls")),
 ]

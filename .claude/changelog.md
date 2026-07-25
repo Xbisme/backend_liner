@@ -50,6 +50,39 @@ riêng, xem `api-context.md`.
   `limit`/`search`/`genre` trong `api-context.md`. ⚠️ Xác nhận cùng mobile khi
   freeze #000.
 
+- **Contract refinement (pre-freeze, vẫn v0.1.0 draft)** từ BE-003: (1) `Track`
+  thêm field `available: boolean` (default true) và cho phép mọi field metadata
+  `nullable` — hỗ trợ **tombstone** khi track đã lưu không còn tra được từ nguồn;
+  (2) `LogHistoryRequest.played_at` chuyển thành **optional** (`required: [track_id]`)
+  — server mặc định thời điểm hiện tại nếu thiếu. Cả hai additive/nới lỏng, không
+  breaking. Cập nhật `openapi.yaml` + `api-context.md`. ⚠️ Xác nhận cùng mobile khi
+  freeze #000.
+
+- **BE-003 User Library — triển khai xong** (branch `BE-003-user-library`):
+  `apps/library` — models `Playlist`, `PlaylistTrack` (`track_id` Jamendo +
+  `position`), `LikedTrack`, `ListeningHistory`; toàn bộ `/me/*` (playlist CRUD +
+  add/remove/reorder, liked idempotent, history distinct+cap). IDOR-proof qua
+  `selectors.get_owned_playlist_or_error` (403 cross-user, 404 khi thật sự không
+  tồn tại). Không lưu metadata bài hát — hydrate lúc đọc qua public
+  `catalog.get_tracks_by_ids` (batch 1 call/trang, tái dùng cache per-id, tombstone
+  cho id chết, 502 khi upstream lỗi toàn cục). Keyset cursor (`updated_at`/
+  `created_at`/`played_at`). Settings mới: `HISTORY_MAX_ENTRIES`,
+  `LIBRARY_PAGE_SIZE_*`, `PLAYLIST_NAME_MAX_LENGTH`. Migration `library/0001`.
+  39 test mới (playlists/IDOR/liked/history/hydration/cascade); **104 test toàn
+  repo pass**; black/ruff/mypy xanh. Không dep mới.
+
+- **Contract `v0.2.0` (mobile MO-002)** — theo yêu cầu phía mobile: `GET
+  /catalog/albums/{id}` trả **`AlbumDetail`** (`Album` + `tracks[]`), `GET
+  /catalog/artists/{id}` trả **`ArtistDetail`** (`Artist` + `tracks[]` +
+  `albums[]`). Backend (`apps/catalog`) bổ sung: `jamendo.get_album`/`get_artist`
+  dùng `/albums/tracks`·`/artists/tracks` (đã verify shape qua Jamendo docs —
+  Constitution XIV), `/albums?artist_id=` cho albums; mapper `map_album_detail`/
+  `map_artist_detail` (inject parent artist/album vào nested track); serializers
+  `AlbumDetailSerializer`/`ArtistDetailSerializer`. Additive → không breaking. Bump
+  contract `v0.1.0 → v0.2.0`.
+
 ### Status
-- Contract `v0.1.0` (draft) chờ freeze #000 cùng repo mobile. BE-002 (Catalog
-  Proxy) đã xong; **BE-003 (User Library)** là spec kế tiếp.
+- Contract **`v0.2.0`** (draft) chờ freeze #000 cùng repo mobile. BE-001 + BE-002
+  đã merge vào `main`; **BE-003 (User Library) triển khai xong** trên branch
+  `BE-003-user-library`, chờ review/merge (kèm catalog `AlbumDetail`/`ArtistDetail`
+  cho MO-002). Spec kế tiếp: **BE-004 (Security Hardening)**.
