@@ -1,0 +1,35 @@
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+extend-exclude = ["**/migrations/*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "DJ"]
+# DJ001: nullable EmailField is intentional — social-only accounts have no email
+# (spec BE-001 clarify; unique-when-present via DB constraint).
+ignore = ["B904", "DJ001"]
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
+strict = true
+# "strict-ish" (Constitution X): relax two checks that fight DRF/3rd-party stubs.
+disallow_any_generics = false
+disallow_untyped_calls = false
+warn_unused_ignores = true
+exclude = ['migrations/']
+
+[[tool.mypy.overrides]]
+module = ["*.migrations.*", "*.tests.*"]
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = ["environ", "sentry_sdk", "google.*", "jwt", "jwt.*"]
+ignore_missing_imports = true
+
+[tool.django-stubs]
+django_settings_module = "config.settings.dev"

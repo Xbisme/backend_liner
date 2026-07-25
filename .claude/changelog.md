@@ -17,7 +17,19 @@ riêng, xem `api-context.md`.
 - Chuyển `openapi.yaml` → `contracts/openapi.yaml` và `screen-inventory.md` →
   `docs/screen-inventory.md` cho khớp layout trong `project-context.md`; sửa
   link tương ứng trong `api-context.md`.
+- **Contract refinement (pre-freeze, vẫn v0.1.0 draft)** từ BE-001 clarify:
+  `User.email` đánh dấu `nullable: true` (tài khoản social-only có thể không có
+  email; định danh bằng `provider + subject_id`); ghi chú cách suy ra
+  `auth_provider`. ⚠️ Cần xác nhận cùng repo mobile khi freeze contract #000.
+
+- **BE-001 Backend Foundation & Auth — triển khai xong** (branch
+  `BE-001-backend-foundation-auth`): Django 5.2 + DRF skeleton, settings split
+  env-driven, `core/` (error envelope, X-App-Key middleware, JWT auth typed
+  errors, cursor pagination, log redaction), custom `User` (email nullable) +
+  `SocialIdentity`, SimpleJWT rotation+blacklist; endpoints `/auth/register|
+  login|social-login|refresh|logout`, `GET/DELETE /me`. Google (google-auth) +
+  Apple (PyJWT) verify. 26 tests pass; black/ruff/mypy xanh.
 
 ### Status
-- Chưa có spec BE-NNN nào được triển khai. Contract `v0.1.0` (draft) chờ freeze
-  #000 cùng repo mobile.
+- Contract `v0.1.0` (draft) chờ freeze #000 cùng repo mobile. BE-002 (Catalog
+  Proxy) là spec kế tiếp.

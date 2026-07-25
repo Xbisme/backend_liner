@@ -117,9 +117,13 @@ components:
       type: object
       properties:
         id: { type: integer }
-        email: { type: string, format: email }
+        # nullable: tài khoản social-only (Apple Hide My Email / user từ chối chia sẻ)
+        # có thể không có email — định danh bằng (provider, subject_id). Xem BE-001 clarify.
+        email: { type: string, format: email, nullable: true }
         display_name: { type: string }
         avatar_url: { type: string, format: uri, nullable: true }
+        # auth_provider suy ra: 'email' nếu account có mật khẩu dùng được,
+        # ngược lại là provider của social identity (google/apple).
         auth_provider: { type: string, enum: [email, google, apple] }
         created_at: { type: string, format: date-time }
 
