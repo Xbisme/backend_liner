@@ -1,0 +1,12 @@
+# Pinned per specs/001-backend-foundation-auth/research.md (PyPI lookup 2026-07-25).
+Django==5.2.16
+djangorestframework==3.17.1
+djangorestframework-simplejwt==5.5.1
+google-auth==2.56.2
+PyJWT==2.13.0
+cryptography==49.0.0
+django-environ==0.14.0
+argon2-cffi==25.1.0
+psycopg[binary]==3.3.4
+redis==8.0.1
+django-redis==7.0.0
