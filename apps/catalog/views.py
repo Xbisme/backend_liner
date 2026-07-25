@@ -12,8 +12,8 @@ from rest_framework.views import APIView
 
 from apps.catalog import genres as genre_helper
 from apps.catalog.serializers import (
-    AlbumSerializer,
-    ArtistSerializer,
+    AlbumDetailSerializer,
+    ArtistDetailSerializer,
     GenreSerializer,
     TrackCursorPageSerializer,
     TrackSerializer,
@@ -51,9 +51,9 @@ class TrackDetailView(APIView):
 
 class ArtistDetailView(APIView):
     def get(self, request: Request, artist_id: str) -> Response:
-        return Response(ArtistSerializer(catalog.get_artist(artist_id)).data)
+        return Response(ArtistDetailSerializer(catalog.get_artist(artist_id)).data)
 
 
 class AlbumDetailView(APIView):
     def get(self, request: Request, album_id: str) -> Response:
-        return Response(AlbumSerializer(catalog.get_album(album_id)).data)
+        return Response(AlbumDetailSerializer(catalog.get_album(album_id)).data)

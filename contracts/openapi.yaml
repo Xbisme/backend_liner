@@ -5,7 +5,7 @@ info:
     Backend proxy cho Jamendo (Creative Commons, non-commercial) + tài khoản
     người dùng (playlist, liked tracks, lịch sử nghe). Suy ra từ
     docs/screen-inventory.md.
-  version: "0.1.0"
+  version: "0.2.0"
 
 servers:
   - url: https://api.example.com/v1
@@ -52,6 +52,29 @@ components:
         artist: { $ref: '#/components/schemas/Artist' }
         cover_url: { type: string, format: uri }
 
+    AlbumDetail:
+      description: Album kèm danh sách track (dùng cho GET /catalog/albums/{id}).
+      allOf:
+        - $ref: '#/components/schemas/Album'
+        - type: object
+          properties:
+            tracks:
+              type: array
+              items: { $ref: '#/components/schemas/Track' }
+
+    ArtistDetail:
+      description: Nghệ sĩ kèm danh sách track (+ album) — GET /catalog/artists/{id}.
+      allOf:
+        - $ref: '#/components/schemas/Artist'
+        - type: object
+          properties:
+            tracks:
+              type: array
+              items: { $ref: '#/components/schemas/Track' }
+            albums:
+              type: array
+              items: { $ref: '#/components/schemas/Album' }
+
     Genre:
       type: object
       properties:
@@ -62,19 +85,31 @@ components:
       type: object
       properties:
         id: { type: string, description: "Jamendo track id" }
-        title: { type: string }
-        artist: { $ref: '#/components/schemas/Artist' }
-        album: { $ref: '#/components/schemas/Album' }
+        available:
+          type: boolean
+          default: true
+          description: >
+            false = "tombstone": track đã lưu (trong playlist/liked/history) không
+            còn tra được từ nguồn nhạc; khi đó các field metadata bên dưới là null.
+            Endpoint catalog luôn trả true. (BE-003)
+        title: { type: string, nullable: true }
+        artist:
+          nullable: true
+          allOf: [ { $ref: '#/components/schemas/Artist' } ]
+        album:
+          nullable: true
+          allOf: [ { $ref: '#/components/schemas/Album' } ]
         genres:
           type: array
           items: { $ref: '#/components/schemas/Genre' }
-        duration_seconds: { type: integer }
-        cover_url: { type: string, format: uri }
+        duration_seconds: { type: integer, nullable: true }
+        cover_url: { type: string, format: uri, nullable: true }
         stream_url:
           type: string
           format: uri
+          nullable: true
           description: URL stream trực tiếp từ Jamendo, dùng thẳng trong audio player
-        license_type: { type: string, example: "CC BY-NC-SA" }
+        license_type: { type: string, example: "CC BY-NC-SA", nullable: true }
         is_liked:
           type: boolean
           description: >
@@ -191,12 +226,18 @@ components:
 
     LogHistoryRequest:
       type: object
-      required: [track_id, played_at]
+      required: [track_id]
       properties:
         track_id: { type: string }
-        played_at: { type: string, format: date-time }
+        played_at:
+          type: string
+          format: date-time
+          description: >
+            Optional — nếu thiếu, server dùng thời điểm hiện tại. Thời điểm tương
+            lai/không hợp lệ → VALIDATION_ERROR. (BE-003)
         completed:
           type: boolean
+          default: false
           description: true nếu nghe hết bài, false nếu bỏ giữa chừng
 
     ErrorResponse:
@@ -360,7 +401,7 @@ paths:
 
   /catalog/artists/{id}:
     get:
-      summary: Chi tiết nghệ sĩ
+      summary: Chi tiết nghệ sĩ + danh sách track
       parameters:
         - name: id
           in: path
@@ -371,13 +412,13 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Artist' }
+              schema: { $ref: '#/components/schemas/ArtistDetail' }
         '404':
           description: Not found
 
   /catalog/albums/{id}:
     get:
-      summary: Chi tiết album
+      summary: Chi tiết album + danh sách track
       parameters:
         - name: id
           in: path
@@ -388,7 +429,7 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Album' }
+              schema: { $ref: '#/components/schemas/AlbumDetail' }
         '404':
           description: Not found
 

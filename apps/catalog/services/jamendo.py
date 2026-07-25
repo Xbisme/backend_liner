@@ -112,12 +112,54 @@ def get_track(track_id: str) -> dict[str, Any]:
     )
 
 
+def list_tracks_by_ids(ids: list[str]) -> list[dict[str, Any]]:
+    """Batch-fetch tracks by id in a single call (Jamendo multi-value ``id=1+2+3``).
+
+    httpx encodes a space-joined value to ``id=1+2+3`` — the format Jamendo expects.
+    Returns the raw results (order/completeness not guaranteed); the caller maps and
+    fills tombstones for any requested id missing from the response. Empty input
+    short-circuits with no upstream call.
+    """
+    if not ids:
+        return []
+    return _results(
+        "tracks",
+        {
+            "id": " ".join(ids),
+            "limit": len(ids),
+            "audioformat": settings.JAMENDO_AUDIOFORMAT,
+            "include": JAMENDO_TRACK_INCLUDE,
+        },
+    )
+
+
 def get_artist(artist_id: str) -> dict[str, Any]:
-    return _get_one("artists", {"id": artist_id})
+    """Artist + its tracks (``/artists/tracks``: parent fields + nested tracks)."""
+    return _get_one(
+        "artists/tracks",
+        {
+            "id": artist_id,
+            "audioformat": settings.JAMENDO_AUDIOFORMAT,
+            "include": JAMENDO_TRACK_INCLUDE,
+        },
+    )
+
+
+def get_artist_albums(artist_id: str) -> list[dict[str, Any]]:
+    """The artist's albums (``/albums?artist_id=`` — each result is an album)."""
+    return _results("albums", {"artist_id": artist_id})
 
 
 def get_album(album_id: str) -> dict[str, Any]:
-    return _get_one("albums", {"id": album_id})
+    """Album + its tracks (``/albums/tracks`` — parent album fields + nested tracks)."""
+    return _get_one(
+        "albums/tracks",
+        {
+            "id": album_id,
+            "audioformat": settings.JAMENDO_AUDIOFORMAT,
+            "include": JAMENDO_TRACK_INCLUDE,
+        },
+    )
 
 
 def _get_one(entity: str, params: dict[str, Any]) -> dict[str, Any]:

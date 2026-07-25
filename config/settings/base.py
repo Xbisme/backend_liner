@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "apps.accounts",
     "apps.catalog",
+    "apps.library",
 ]
 
 MIDDLEWARE = [
@@ -167,6 +168,12 @@ CATALOG_GENRES = [
     {"slug": "world", "name": "World", "tag": "world"},
     {"slug": "relaxation", "name": "Relaxation", "tag": "relaxation"},
 ]
+
+# --- User library — BE-003 (Constitution VI: all tunables env-driven) --------
+HISTORY_MAX_ENTRIES = env.int("HISTORY_MAX_ENTRIES", default=100)
+LIBRARY_PAGE_SIZE_DEFAULT = env.int("LIBRARY_PAGE_SIZE_DEFAULT", default=20)
+LIBRARY_PAGE_SIZE_MAX = env.int("LIBRARY_PAGE_SIZE_MAX", default=50)
+PLAYLIST_NAME_MAX_LENGTH = env.int("PLAYLIST_NAME_MAX_LENGTH", default=200)
 
 # --- Social providers --------------------------------------------------------
 GOOGLE_OAUTH_CLIENT_ID = env("GOOGLE_OAUTH_CLIENT_ID", default="")

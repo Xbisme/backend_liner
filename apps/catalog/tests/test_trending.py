@@ -18,6 +18,7 @@ def test_trending_returns_mapped_tracks(api, jamendo):
     assert "client_id" not in resp.content.decode()
     assert set(body[0]) == {
         "id",
+        "available",
         "title",
         "artist",
         "album",
@@ -28,6 +29,7 @@ def test_trending_returns_mapped_tracks(api, jamendo):
         "license_type",
         "is_liked",
     }
+    assert body[0]["available"] is True
 
 
 def test_trending_genre_filter_maps_to_tags(api, jamendo):

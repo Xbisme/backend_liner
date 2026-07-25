@@ -3,7 +3,7 @@
 > **Vai trò**: Bước làm TRƯỚC khi chốt API. `contracts/openapi.yaml` và `.claude/api-context.md` được suy ra từ file này.
 > File tồn tại độc lập ở CẢ 2 REPO (`soundwave-backend`, `soundwave-mobile`), đồng bộ tay.
 >
-> Last updated: 2026-07-24 · Contract version tương ứng: `v0.1.0` (draft)
+> Last updated: 2026-07-25 · Contract version tương ứng: `v0.2.0` (MO-002: Album/Artist Detail có track list)
 
 ## Bối cảnh khác biệt so với LiveCanvas
 
@@ -18,7 +18,7 @@
 | 1 | **Onboarding/Login** | — | Đăng ký email/password, đăng nhập, đăng nhập Google/Apple | `POST /auth/register`, `POST /auth/login`, `POST /auth/social-login` |
 | 2 | **Home/Discover** | Track/playlist thịnh hành, theo thể loại (genre = tag Jamendo) | Tap → Track Detail hoặc Player | `GET /catalog/trending`, `GET /catalog/genres` |
 | 3 | **Search** | Kết quả track/artist/album theo từ khóa | Scroll load thêm (cursor), tap → Detail | `GET /catalog/tracks?search=...` |
-| 4 | **Track/Album/Artist Detail** | Metadata đầy đủ, danh sách track (nếu album) | Play, Like, Thêm vào playlist | `GET /catalog/tracks/{id}`, `GET /catalog/albums/{id}`, `GET /catalog/artists/{id}` |
+| 4 | **Track/Album/Artist Detail** | Metadata đầy đủ; Album/Artist Detail kèm **danh sách track** (`AlbumDetail`/`ArtistDetail`) | Play, Play-all, Like (read-only ở MO-002), Thêm vào playlist (MO-003) | `GET /catalog/tracks/{id}` → `Track`, `GET /catalog/albums/{id}` → `AlbumDetail`, `GET /catalog/artists/{id}` → `ArtistDetail` |
 | 5 | **Now Playing (Player)** | Track hiện tại, queue, trạng thái play/pause | Play/Pause, Seek, Next/Prev, Shuffle/Repeat, Like, Thêm vào playlist, Log lịch sử nghe | `POST /me/history` |
 | 6 | **Mini Player** (persistent bar) | Track hiện tại rút gọn | Play/Pause, tap → mở Now Playing | — (dùng lại state Now Playing) |
 | 7 | **Library — Playlists** | Danh sách playlist của user | Tạo playlist mới, tap → Playlist Detail | `GET /me/playlists`, `POST /me/playlists` |

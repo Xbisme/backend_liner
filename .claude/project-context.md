@@ -3,7 +3,7 @@
 > Repo: `soundwave-backend` (Django + DRF)
 > Repo liên quan: `soundwave-mobile` (Flutter) — độc lập, đồng bộ qua `contracts/openapi.yaml` + `.claude/api-context.md`
 >
-> Last updated: 2026-07-25 (BE-001 merged; BE-002 Catalog Proxy triển khai xong, chờ merge)
+> Last updated: 2026-07-25 (BE-001 + BE-002 Catalog Proxy đã merge vào main; BE-003 User Library là spec kế tiếp)
 
 ## Snapshot
 
@@ -17,9 +17,9 @@
 
 ## Current Focus
 
-- **Trạng thái**: BE-001 (Auth) đã merge. **BE-002 (Catalog Proxy) triển khai xong** trên branch `BE-002-catalog-proxy`, chờ merge — `apps/catalog` proxy + cache Jamendo, 6 endpoint `/catalog/*`, 39 test mới.
-- **Đã có sẵn**: `docs/screen-inventory.md`, `contracts/openapi.yaml` v0.1.0, `.claude/api-context.md` v0.1.0 (draft, chờ review cùng phía mobile), `.specify/memory/constitution.md` v1.0.0, `.claude/dev-workflow.md`, `.claude/changelog.md`, `.claude/decisions/`.
-- **Spec tiếp theo**: merge BE-002 (báo mobile MO-002) → `BE-003-user-library`.
+- **Trạng thái**: BE-001 (Auth) + BE-002 (Catalog Proxy) đã merge vào `main`. **BE-003 (User Library) triển khai xong** trên branch `BE-003-user-library` — `apps/library` (playlist/liked/history, toàn bộ `/me/*`, IDOR-proof, hydrate metadata qua catalog), **104 test toàn repo pass**, chờ review/merge. Kèm catalog `AlbumDetail`/`ArtistDetail` (contract **v0.2.0**, yêu cầu mobile MO-002).
+- **Đã có sẵn**: `docs/screen-inventory.md`, `contracts/openapi.yaml` **v0.2.0**, `.claude/api-context.md` v0.2.0 (draft, chờ review cùng phía mobile), `.specify/memory/constitution.md` v1.0.0, `.claude/dev-workflow.md`, `.claude/changelog.md`, `.claude/decisions/`, `specs/003-user-library/`.
+- **Spec tiếp theo**: merge BE-003 (báo mobile MO-002: catalog thật + album/artist detail) → `BE-004-security-hardening`.
 - **Đã quyết định**: Jamendo client_id thật (đã cấu hình trong `.env`); cache TTL theo loại (`CACHE_TTL_*` trong settings); genres = danh sách curated trong settings (`CATALOG_GENRES`).
 - **Chưa quyết định**:
   - Google/Apple Sign-In credentials thật cho production (hiện `.env` để placeholder).

@@ -2,7 +2,7 @@
 
 > Companion đọc-được-cho-người/LLM của [`contracts/openapi.yaml`](../contracts/openapi.yaml), suy ra từ [`docs/screen-inventory.md`](../docs/screen-inventory.md). Tồn tại độc lập ở CẢ 2 REPO, đồng bộ tay (xem "Contract Sync" trong `dev-workflow.md`).
 >
-> Last updated: 2026-07-24 · Contract version: **`v0.1.0`**
+> Last updated: 2026-07-25 · Contract version: **`v0.2.0`** (MO-002: thêm `AlbumDetail`/`ArtistDetail` cho Detail track list)
 
 ## Quy ước chung
 
@@ -90,6 +90,7 @@ Format chung: `{ "error": { "code": "...", "message": "..." } }`
 {
   "items": [{
     "id": "1234567",
+    "available": true,
     "title": "Night Drive",
     "artist": { "id": "998", "name": "Aeon Waves", "image_url": "https://..." },
     "album": { "id": "555", "title": "Synth Horizons", "artist": {"...": "..."}, "cover_url": "https://..." },
@@ -106,9 +107,25 @@ Format chung: `{ "error": { "code": "...", "message": "..." } }`
 ```
 - **502**: `CATALOG_UPSTREAM_ERROR` — Jamendo timeout, client hiện thông báo thử lại
 
-### `GET /catalog/tracks/{id}` · `GET /catalog/artists/{id}` · `GET /catalog/albums/{id}`
+> **`Track.available` (BE-003)**: endpoint catalog luôn trả `available: true` với đầy
+> đủ metadata. Trong response thư viện (`/me/liked-tracks`, `/me/history`,
+> `PlaylistDetail.tracks`), một track đã lưu không còn tra được từ nguồn nhạc trả về
+> dạng **tombstone**: `available: false` và mọi field metadata (`title`/`artist`/
+> `album`/`cover_url`/`stream_url`/`license_type`/`duration_seconds`) là `null`; chỉ
+> `id`, `available`, `is_liked` có giá trị. Lỗi upstream *toàn cục* khi hydrate vẫn là
+> `502 CATALOG_UPSTREAM_ERROR` (không phải tombstone). Field additive → không breaking.
+
+### `GET /catalog/tracks/{id}`
 - Header: `X-App-Key`
-- **200**: object tương ứng · **404**: `NOT_FOUND`
+- **200**: `Track` · **404**: `NOT_FOUND`
+
+### `GET /catalog/albums/{id}`
+- Header: `X-App-Key`
+- **200**: `AlbumDetail` = `Album` + `tracks: Track[]` (danh sách bài trong album) · **404**: `NOT_FOUND`
+
+### `GET /catalog/artists/{id}`
+- Header: `X-App-Key`
+- **200**: `ArtistDetail` = `Artist` + `tracks: Track[]` (+ `albums: Album[]` tùy chọn) · **404**: `NOT_FOUND`
 
 ---
 
@@ -165,4 +182,6 @@ Tất cả yêu cầu `X-App-Key` + `Authorization: Bearer <access_token>`.
 
 ### `POST /me/history`
 - Body: `{ "track_id": "1234567", "played_at": "2026-07-24T20:10:00Z", "completed": true }`
+- `played_at` **optional** (thiếu → server dùng thời điểm hiện tại; tương lai/không hợp lệ → `VALIDATION_ERROR`); `completed` optional (mặc định `false`).
+- Ghi lại cùng một `track_id` **upsert** — cập nhật `played_at`/`completed`, không tạo dòng mới (history là danh sách "nghe gần đây" distinct, giữ tối đa `HISTORY_MAX_ENTRIES` mục/user).
 - **201**: ghi nhận thành công — gọi khi track kết thúc hoặc user chuyển bài giữa chừng (`completed: false`)
