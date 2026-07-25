@@ -20,6 +20,10 @@ ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.
 
 # App-level gate (Layer-1 auth). Empty → middleware fails closed.
 X_APP_KEY = env("X_APP_KEY", default="")
+
+# CORS allowlist (explicit — never "*"; Constitution VIII). Native mobile clients
+# aren't subject to CORS, but this guards any browser client. Empty = no origins.
+CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
 APP_KEY_EXEMPT_PREFIXES = env.list(
     "APP_KEY_EXEMPT_PREFIXES", default=["/admin", "/static", "/health"]
 )
@@ -34,6 +38,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework_simplejwt.token_blacklist",
+    "corsheaders",
     "apps.accounts",
     "apps.catalog",
     "apps.library",
@@ -41,6 +46,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # CORS must run before CommonMiddleware (django-cors-headers docs).
+    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "core.middleware.AppKeyMiddleware",
@@ -104,6 +111,10 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # --- DRF ---------------------------------------------------------------------
+# Trusted proxy hops for client-IP resolution (BE-004 FR-002). 0 = use REMOTE_ADDR
+# and never trust X-Forwarded-For (safe default; raise only behind a known proxy).
+NUM_PROXIES = env.int("NUM_PROXIES", default=0)
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ("core.authentication.JWTAuthentication",),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.AllowAny",),
@@ -111,7 +122,20 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "core.pagination.CursorPage",
     "PAGE_SIZE": env.int("DEFAULT_PAGE_SIZE", default=20),
     "UNAUTHENTICATED_USER": None,
+    "NUM_PROXIES": NUM_PROXIES,
+    # Throttle rates are env-driven (Constitution VI); classes applied per-view
+    # (core.throttling), NOT globally, so read endpoints stay unthrottled.
+    "DEFAULT_THROTTLE_RATES": {
+        "auth": env("THROTTLE_AUTH", default="10/min"),
+        "user_write": env("THROTTLE_USER", default="60/min"),
+        "history": env("THROTTLE_HISTORY", default="120/min"),
+        "catalog": env("THROTTLE_CATALOG", default="120/min"),
+    },
 }
+
+# Minimum byte length for the HS256 JWT signing key (SECRET_KEY). Enforced at
+# boot in production settings + via a deploy system check (BE-004 FR-010).
+JWT_MIN_SECRET_BYTES = env.int("JWT_MIN_SECRET_BYTES", default=32)
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(

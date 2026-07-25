@@ -5,7 +5,7 @@ info:
     Backend proxy cho Jamendo (Creative Commons, non-commercial) + tài khoản
     người dùng (playlist, liked tracks, lịch sử nghe). Suy ra từ
     docs/screen-inventory.md.
-  version: "0.2.0"
+  version: "0.3.0"
 
 servers:
   - url: https://api.example.com/v1
@@ -249,6 +249,20 @@ components:
             code: { type: string }
             message: { type: string }
 
+  responses:
+    RateLimited:
+      description: >
+        Quá nhiều request — client vượt hạn mức tần suất (RATE_LIMITED). Áp dụng
+        cho auth (per-IP), catalog (per-IP), và các endpoint ghi /me/* (per-user).
+        Xem .claude/api-context.md mục "Rate limiting". (BE-004)
+      headers:
+        Retry-After:
+          schema: { type: integer }
+          description: Số giây client nên đợi trước khi thử lại.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+
 paths:
   /auth/register:
     post:
@@ -267,6 +281,8 @@ paths:
               schema: { $ref: '#/components/schemas/AuthTokenResponse' }
         '409':
           description: Email đã tồn tại
+        '429':
+          $ref: '#/components/responses/RateLimited'
 
   /auth/login:
     post:
@@ -285,6 +301,8 @@ paths:
               schema: { $ref: '#/components/schemas/AuthTokenResponse' }
         '401':
           description: Sai email/password
+        '429':
+          $ref: '#/components/responses/RateLimited'
 
   /auth/social-login:
     post:
@@ -303,6 +321,8 @@ paths:
               schema: { $ref: '#/components/schemas/AuthTokenResponse' }
         '400':
           description: id_token không hợp lệ
+        '429':
+          $ref: '#/components/responses/RateLimited'
 
   /auth/refresh:
     post:

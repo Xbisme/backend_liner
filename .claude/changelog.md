@@ -81,8 +81,32 @@ riêng, xem `api-context.md`.
   `AlbumDetailSerializer`/`ArtistDetailSerializer`. Additive → không breaking. Bump
   contract `v0.1.0 → v0.2.0`.
 
+- **BE-004 Security Hardening & Production Readiness — triển khai xong** (branch
+  `BE-004-security-hardening`): cross-cutting ở `core/` + `config/settings/`, không
+  app/model mới → không migration. (1) **Rate limiting**: `core/throttling.py`
+  (throttle per-scope: auth per-IP fail-closed, catalog per-IP, ghi `/me/*` per-user,
+  history per-user — fail-open khi Redis lỗi); rates settings-driven
+  (`THROTTLE_AUTH|CATALOG|USER|HISTORY`, `NUM_PROXIES`); áp per-view. (2) **Token
+  lifecycle**: logout per-session idempotent (bỏ `revoke_all` vô tình), fail-fast
+  khóa ký JWT <32 bytes ở production + deploy check (`core/checks.py`). (3)
+  **Observability**: `core/observability.py` — Sentry env-driven + `before_send`
+  scrub secret/PII (kép với log redaction); log ngữ cảnh sự cố upstream Jamendo
+  (endpoint/status/latency). (4) **Audit & load**: CORS thực thi (`django-cors-headers`),
+  IDOR sweep liked/history, cache-hit chống stampede, `owasp-review.md`. Dep mới:
+  `django-cors-headers==4.9.0`, `sentry-sdk` (2.20.0→2.66.1, chuyển sang base.txt).
+  **30 test mới; 134 test toàn repo pass**; black/ruff/mypy xanh; không migration.
+  ADR `0002` (định danh throttle + fail mode).
+
+- **Contract `v0.3.0` (BE-004)** — additive, không breaking: thêm mã lỗi
+  **`RATE_LIMITED` (429)** + header **`Retry-After`** vào `openapi.yaml` (response
+  `RateLimited`) + `api-context.md` (Error Code Catalog + mục Rate limiting) +
+  `screen-inventory.md` (ghi chú cross-cutting). Bump `v0.2.0 → v0.3.0`. ⚠️ Đồng bộ
+  mobile khi freeze #000.
+
 ### Status
-- Contract **`v0.2.0`** (draft) chờ freeze #000 cùng repo mobile. BE-001 + BE-002
-  đã merge vào `main`; **BE-003 (User Library) triển khai xong** trên branch
-  `BE-003-user-library`, chờ review/merge (kèm catalog `AlbumDetail`/`ArtistDetail`
-  cho MO-002). Spec kế tiếp: **BE-004 (Security Hardening)**.
+- Contract **`v0.3.0`** (draft) chờ freeze #000 cùng repo mobile. BE-001 + BE-002
+  + **BE-003 (User Library) đã merge vào `main`** (PR #3, commit `9c7a87f`; kèm
+  catalog `AlbumDetail`/`ArtistDetail` cho MO-002). **BE-004 (Security Hardening)
+  triển khai xong** trên branch `BE-004-security-hardening`, chờ review/merge. Spec
+  kế tiếp: **BE-005 (Deploy & Launch)**. ⚠️ Treo: báo mobile MO-002 + freeze
+  contract #000 (gồm `RATE_LIMITED`).

@@ -12,3 +12,6 @@ redis==8.0.1
 django-redis==7.0.0
 # BE-002 catalog proxy — HTTP client with first-class timeouts (research.md §1).
 httpx==0.28.1
+# BE-004 security hardening (PyPI lookup 2026-07-25, specs/004-security-hardening/research.md).
+django-cors-headers==4.9.0
+sentry-sdk==2.66.1

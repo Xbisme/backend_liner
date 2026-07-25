@@ -1,7 +1,7 @@
 # SoundWave Backend v1.0 — Spec Roadmap
 
 > Repo: `soundwave-backend`. Track song song bên `soundwave-mobile` (spec `MO-NNN`).
-> Last updated: 2026-07-25 (BE-001 + BE-002 Catalog Proxy đã merge; BE-003 User Library là spec kế tiếp)
+> Last updated: 2026-07-25 (BE-001 + BE-002 + BE-003 User Library đã merge; BE-004 Security Hardening là spec kế tiếp)
 
 ## Dependency Graph
 
@@ -54,12 +54,13 @@ BE-005: Deploy & Launch Support
 - **⚠️ Điểm đồng bộ**: báo mobile khi merge — chuyển từ mock sang API thật (MO-002).
 
 ### BE-003: User Library
-- **Status**: ✅ Triển khai xong (branch `BE-003-user-library`) — chờ review/merge. Xem `changelog.md`. Kèm catalog `AlbumDetail`/`ArtistDetail` (contract v0.2.0, MO-002).
+- **Status**: ✅ Đã merge vào `main` (PR #3, commit `9c7a87f`). Xem `changelog.md`. Kèm catalog `AlbumDetail`/`ArtistDetail` (contract v0.2.0, MO-002). ⚠️ Cần báo mobile MO-002.
 - **Branch**: `BE-003-user-library`
 - **Depends on**: BE-002
 - **Scope**: `apps/library` — model `Playlist`, `PlaylistTrack` (lưu `track_id` Jamendo + thứ tự), `LikedTrack`, `ListeningHistory`; toàn bộ endpoint `/me/*`; kiểm tra `FORBIDDEN` khi thao tác playlist không thuộc user hiện tại (không dựa vào client tự khai `user_id`).
 
 ### BE-004: Security Hardening & Production Readiness
+- **Status**: ✅ Triển khai xong (branch `BE-004-security-hardening`) — chờ review/merge. 134 test pass. Xem `changelog.md` + `specs/004-security-hardening/`. Contract v0.3.0 (`RATE_LIMITED`).
 - **Branch**: `BE-004-security-hardening`
 - **Depends on**: BE-003
 - **Scope**: Rate limit theo user (chống spam `/me/history`), refresh token rotation + blacklist khi logout, Sentry, load test cache layer catalog, OWASP review (đặc biệt IDOR ở `/me/playlists/{id}`).

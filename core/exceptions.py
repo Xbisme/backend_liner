@@ -80,6 +80,16 @@ def api_exception_handler(exc: Exception, context: dict[str, Any]) -> Response:
             default_message_for(ErrorCode.NOT_FOUND),
             status_for(ErrorCode.NOT_FOUND),
         )
+    if isinstance(exc, drf_exc.Throttled):
+        throttled = _envelope(
+            ErrorCode.RATE_LIMITED,
+            default_message_for(ErrorCode.RATE_LIMITED),
+            status_for(ErrorCode.RATE_LIMITED),
+        )
+        wait = getattr(exc, "wait", None)
+        if wait is not None:
+            throttled["Retry-After"] = str(int(wait))
+        return throttled
 
     # 3. Let DRF build a response for anything else it knows (405, throttled…).
     #    Imported lazily to avoid a circular import at DRF settings-init time.
