@@ -1,0 +1,612 @@
+openapi: 3.0.3
+info:
+  title: SoundWave API
+  description: >
+    Backend proxy cho Jamendo (Creative Commons, non-commercial) + tài khoản
+    người dùng (playlist, liked tracks, lịch sử nghe). Suy ra từ
+    docs/screen-inventory.md.
+  version: "0.1.0"
+
+servers:
+  - url: https://api.example.com/v1
+  - url: https://staging-api.example.com/v1
+
+security:
+  - AppApiKey: []
+
+components:
+  securitySchemes:
+    AppApiKey:
+      type: apiKey
+      in: header
+      name: X-App-Key
+    UserBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access token của user, lấy từ /auth/login hoặc /auth/social-login
+
+  parameters:
+    CursorParam:
+      name: cursor
+      in: query
+      schema: { type: string }
+    LimitParam:
+      name: limit
+      in: query
+      schema: { type: integer, default: 20, maximum: 100 }
+
+  schemas:
+    Artist:
+      type: object
+      properties:
+        id: { type: string, description: "Jamendo artist id" }
+        name: { type: string }
+        image_url: { type: string, format: uri }
+
+    Album:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        artist: { $ref: '#/components/schemas/Artist' }
+        cover_url: { type: string, format: uri }
+
+    Genre:
+      type: object
+      properties:
+        slug: { type: string, example: "ambient" }
+        name: { type: string, example: "Ambient" }
+
+    Track:
+      type: object
+      properties:
+        id: { type: string, description: "Jamendo track id" }
+        title: { type: string }
+        artist: { $ref: '#/components/schemas/Artist' }
+        album: { $ref: '#/components/schemas/Album' }
+        genres:
+          type: array
+          items: { $ref: '#/components/schemas/Genre' }
+        duration_seconds: { type: integer }
+        cover_url: { type: string, format: uri }
+        stream_url:
+          type: string
+          format: uri
+          description: URL stream trực tiếp từ Jamendo, dùng thẳng trong audio player
+        license_type: { type: string, example: "CC BY-NC-SA" }
+        is_liked:
+          type: boolean
+          description: >
+            Chỉ có giá trị đúng khi request có Authorization Bearer hợp lệ;
+            null/false nếu request là anonymous
+
+    TrackCursorPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Track' }
+        next_cursor: { type: string, nullable: true }
+        has_more: { type: boolean }
+
+    Playlist:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        track_count: { type: integer }
+        cover_url:
+          type: string
+          format: uri
+          nullable: true
+          description: Ghép từ cover 4 track đầu, null nếu playlist rỗng
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    PlaylistDetail:
+      allOf:
+        - $ref: '#/components/schemas/Playlist'
+        - type: object
+          properties:
+            tracks:
+              type: array
+              items: { $ref: '#/components/schemas/Track' }
+
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        email: { type: string, format: email }
+        display_name: { type: string }
+        avatar_url: { type: string, format: uri, nullable: true }
+        auth_provider: { type: string, enum: [email, google, apple] }
+        created_at: { type: string, format: date-time }
+
+    AuthTokenResponse:
+      type: object
+      properties:
+        access_token: { type: string }
+        refresh_token: { type: string }
+        expires_in: { type: integer, description: "Số giây access_token còn hiệu lực" }
+        user: { $ref: '#/components/schemas/User' }
+
+    RegisterRequest:
+      type: object
+      required: [email, password, display_name]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8 }
+        display_name: { type: string }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+
+    SocialLoginRequest:
+      type: object
+      required: [provider, id_token]
+      properties:
+        provider: { type: string, enum: [google, apple] }
+        id_token: { type: string, description: "ID token từ Google/Apple Sign-In SDK" }
+
+    RefreshTokenRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token: { type: string }
+
+    CreatePlaylistRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+
+    UpdatePlaylistRequest:
+      type: object
+      properties:
+        name: { type: string }
+
+    AddTrackToPlaylistRequest:
+      type: object
+      required: [track_id]
+      properties:
+        track_id: { type: string, description: "Jamendo track id" }
+
+    ReorderPlaylistRequest:
+      type: object
+      required: [track_ids]
+      properties:
+        track_ids:
+          type: array
+          items: { type: string }
+          description: Toàn bộ danh sách track_id theo thứ tự mới
+
+    LogHistoryRequest:
+      type: object
+      required: [track_id, played_at]
+      properties:
+        track_id: { type: string }
+        played_at: { type: string, format: date-time }
+        completed:
+          type: boolean
+          description: true nếu nghe hết bài, false nếu bỏ giữa chừng
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+
+paths:
+  /auth/register:
+    post:
+      summary: Đăng ký tài khoản email/password
+      security: [{ AppApiKey: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthTokenResponse' }
+        '409':
+          description: Email đã tồn tại
+
+  /auth/login:
+    post:
+      summary: Đăng nhập email/password
+      security: [{ AppApiKey: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthTokenResponse' }
+        '401':
+          description: Sai email/password
+
+  /auth/social-login:
+    post:
+      summary: Đăng nhập/đăng ký qua Google hoặc Apple
+      security: [{ AppApiKey: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SocialLoginRequest' }
+      responses:
+        '200':
+          description: OK (user có sẵn hoặc vừa tạo mới)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthTokenResponse' }
+        '400':
+          description: id_token không hợp lệ
+
+  /auth/refresh:
+    post:
+      summary: Lấy access_token mới từ refresh_token
+      security: [{ AppApiKey: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RefreshTokenRequest' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthTokenResponse' }
+        '401':
+          description: refresh_token không hợp lệ/hết hạn/đã bị revoke
+
+  /auth/logout:
+    post:
+      summary: Revoke refresh_token hiện tại
+      security: [{ AppApiKey: [], UserBearer: [] }]
+      responses:
+        '204':
+          description: Đã đăng xuất
+
+  /catalog/trending:
+    get:
+      summary: Track/playlist thịnh hành (proxy Jamendo, có cache)
+      parameters:
+        - name: genre
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Track' }
+
+  /catalog/genres:
+    get:
+      summary: Danh sách thể loại (tag Jamendo, cache dài hạn)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Genre' }
+
+  /catalog/tracks:
+    get:
+      summary: Tìm kiếm/duyệt track — cursor pagination
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: genre
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TrackCursorPage' }
+        '502':
+          description: Jamendo upstream lỗi/timeout
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /catalog/tracks/{id}:
+    get:
+      summary: Chi tiết 1 track
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Track' }
+        '404':
+          description: Not found
+
+  /catalog/artists/{id}:
+    get:
+      summary: Chi tiết nghệ sĩ + danh sách track
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+        '404':
+          description: Not found
+
+  /catalog/albums/{id}:
+    get:
+      summary: Chi tiết album + danh sách track
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+        '404':
+          description: Not found
+
+  /me:
+    get:
+      summary: Thông tin tài khoản hiện tại
+      security: [{ AppApiKey: [], UserBearer: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401':
+          description: Chưa đăng nhập/token hết hạn
+    delete:
+      summary: Xóa tài khoản (cùng toàn bộ playlist/liked/history)
+      security: [{ AppApiKey: [], UserBearer: [] }]
+      responses:
+        '204':
+          description: Đã xóa
+
+  /me/liked-tracks:
+    get:
+      summary: Danh sách track đã like — cursor pagination
+      security: [{ AppApiKey: [], UserBearer: [] }]
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TrackCursorPage' }
+
+  /me/liked-tracks/{track_id}:
+    post:
+      summary: Like 1 track (idempotent — like lại track đã like vẫn trả 204)
+      security: [{ AppApiKey: [], UserBearer: [] }]
+      parameters:
+        - name: track_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+          description: OK
+    delete:
+      summary: Bỏ like
+      security: [{ AppApiKey: [], UserBearer: [] }]
+      parameters:
+        - name: track_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+          description: OK
+
+  /me/playlists:
+    get:
+      summary: Danh sách playlist của user
+      security: [{ AppApiKey: [], UserBearer: [] }]
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Playlist' }
+                  next_cursor: { type: string, nullable: true }
+                  has_more: { type: boolean }
+    post:
+      summary: Tạo playlist mới
+      security: [{ AppApiKey: [], UserBearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreatePlaylistRequest' }
+      responses:
+        '201':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Playlist' }
+
+  /me/playlists/{id}:
+    get:
+      summary: Chi tiết playlist (bao gồm track)
+      security: [{ AppApiKey: [], UserBearer: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PlaylistDetail' }
+        '403':
+          description: Playlist thuộc user khác
+        '404':
+          description: Not found
+    patch:
+      summary: Đổi tên playlist
+      security: [{ AppApiKey: [], UserBearer: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdatePlaylistRequest' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Playlist' }
+    delete:
+      summary: Xóa playlist
+      security: [{ AppApiKey: [], UserBearer: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '204':
+          description: OK
+        '403':
+          description: Playlist thuộc user khác
+
+  /me/playlists/{id}/tracks:
+    post:
+      summary: Thêm track vào playlist (cuối danh sách)
+      security: [{ AppApiKey: [], UserBearer: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AddTrackToPlaylistRequest' }
+      responses:
+        '204':
+          description: OK
+        '409':
+          description: Track đã có trong playlist
+
+  /me/playlists/{id}/tracks/{track_id}:
+    delete:
+      summary: Xóa track khỏi playlist
+      security: [{ AppApiKey: [], UserBearer: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: track_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+          description: OK
+
+  /me/playlists/{id}/tracks/reorder:
+    patch:
+      summary: Sắp xếp lại thứ tự toàn bộ track trong playlist
+      security: [{ AppApiKey: [], UserBearer: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReorderPlaylistRequest' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PlaylistDetail' }
+        '400':
+          description: track_ids không khớp với track thực tế trong playlist
+
+  /me/history:
+    get:
+      summary: Lịch sử nghe — cursor pagination
+      security: [{ AppApiKey: [], UserBearer: [] }]
+      parameters:
+        - $ref: '#/components/parameters/CursorParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TrackCursorPage' }
+    post:
+      summary: Ghi nhận 1 lượt nghe (gọi khi track kết thúc hoặc user chuyển bài)
+      security: [{ AppApiKey: [], UserBearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LogHistoryRequest' }
+      responses:
+        '201':
+          description: OK
