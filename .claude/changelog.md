@@ -81,8 +81,46 @@ riêng, xem `api-context.md`.
   `AlbumDetailSerializer`/`ArtistDetailSerializer`. Additive → không breaking. Bump
   contract `v0.1.0 → v0.2.0`.
 
+- **BE-004 Security Hardening & Production Readiness — triển khai xong** (branch
+  `BE-004-security-hardening`): cross-cutting ở `core/` + `config/settings/`, không
+  app/model mới → không migration. (1) **Rate limiting**: `core/throttling.py`
+  (throttle per-scope: auth per-IP fail-closed, catalog per-IP, ghi `/me/*` per-user,
+  history per-user — fail-open khi Redis lỗi); rates settings-driven
+  (`THROTTLE_AUTH|CATALOG|USER|HISTORY`, `NUM_PROXIES`); áp per-view. (2) **Token
+  lifecycle**: logout per-session idempotent (bỏ `revoke_all` vô tình), fail-fast
+  khóa ký JWT <32 bytes ở production + deploy check (`core/checks.py`). (3)
+  **Observability**: `core/observability.py` — Sentry env-driven + `before_send`
+  scrub secret/PII (kép với log redaction); log ngữ cảnh sự cố upstream Jamendo
+  (endpoint/status/latency). (4) **Audit & load**: CORS thực thi (`django-cors-headers`),
+  IDOR sweep liked/history, cache-hit chống stampede, `owasp-review.md`. Dep mới:
+  `django-cors-headers==4.9.0`, `sentry-sdk` (2.20.0→2.66.1, chuyển sang base.txt).
+  **30 test mới; 134 test toàn repo pass**; black/ruff/mypy xanh; không migration.
+  ADR `0002` (định danh throttle + fail mode).
+
+- **Contract `v0.3.0` (BE-004)** — additive, không breaking: thêm mã lỗi
+  **`RATE_LIMITED` (429)** + header **`Retry-After`** vào `openapi.yaml` (response
+  `RateLimited`) + `api-context.md` (Error Code Catalog + mục Rate limiting) +
+  `screen-inventory.md` (ghi chú cross-cutting). Bump `v0.2.0 → v0.3.0`. ⚠️ Đồng bộ
+  mobile khi freeze #000.
+
+### Fixed
+- **Google social-login trả 500 thay vì 400** (phát hiện khi curl end-to-end): dep
+  `requests` thiếu — `google.auth.transport.requests` cần nó nhưng `google-auth`
+  không kéo về; import nằm ngoài try/except nên `ImportError` → 500. Bug BE-001 tiềm
+  ẩn (test mock `verify_social_token` nên đường verify thật chưa từng chạy). Thêm
+  `requests==2.34.2` vào `requirements/base.txt`. Nay token sai → `400
+  SOCIAL_TOKEN_INVALID` đúng chuẩn.
+- **Catalog trending trả rỗng** (phát hiện khi curl thật lúc review BE-004): Jamendo
+  order `popularity_month`/`popularity_week` trả 0 kết quả ở free tier. Chuyển
+  `JAMENDO_TRENDING_ORDER` từ hằng số `constants.py` → **settings env-driven**
+  (`config/settings/base.py`, default `popularity_total` — hoạt động), cập nhật
+  `jamendo.py` đọc từ settings + `.env.example`. `/catalog/trending` nay trả 50 track
+  thật. Không breaking (Constitution VI: tunable env-driven).
+
 ### Status
-- Contract **`v0.2.0`** (draft) chờ freeze #000 cùng repo mobile. BE-001 + BE-002
-  đã merge vào `main`; **BE-003 (User Library) triển khai xong** trên branch
-  `BE-003-user-library`, chờ review/merge (kèm catalog `AlbumDetail`/`ArtistDetail`
-  cho MO-002). Spec kế tiếp: **BE-004 (Security Hardening)**.
+- Contract **`v0.3.0`** (draft) chờ freeze #000 cùng repo mobile. BE-001 + BE-002
+  + **BE-003 (User Library) đã merge vào `main`** (PR #3, commit `9c7a87f`; kèm
+  catalog `AlbumDetail`/`ArtistDetail` cho MO-002). **BE-004 (Security Hardening)
+  triển khai xong** trên branch `BE-004-security-hardening`, chờ review/merge. Spec
+  kế tiếp: **BE-005 (Deploy & Launch)**. ⚠️ Treo: báo mobile MO-002 + freeze
+  contract #000 (gồm `RATE_LIMITED`).

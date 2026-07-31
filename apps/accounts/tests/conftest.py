@@ -1,8 +1,22 @@
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 from django.conf import settings
+from django.core.cache import cache
 from rest_framework.test import APIClient
+
+
+@pytest.fixture(autouse=True)
+def _isolate_cache(settings: Any) -> Any:
+    """In-process cache per test so throttle counters never leak (BE-004)."""
+    settings.CACHES = {
+        "default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}
+    }
+    cache.clear()
+    yield
+    cache.clear()
 
 
 @pytest.fixture

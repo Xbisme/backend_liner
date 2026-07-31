@@ -5,3 +5,7 @@ class AccountsConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "apps.accounts"
     label = "accounts"
+
+    def ready(self) -> None:
+        # Register deploy-time system checks (JWT signing-key length — BE-004).
+        import core.checks  # noqa: F401

@@ -3,6 +3,9 @@ Django==5.2.16
 djangorestframework==3.17.1
 djangorestframework-simplejwt==5.5.1
 google-auth==2.56.2
+# Required by google.auth.transport.requests (Google ID-token verify); google-auth
+# does not pull it in automatically. PyPI 2026-07-25.
+requests==2.34.2
 PyJWT==2.13.0
 cryptography==49.0.0
 django-environ==0.14.0
@@ -12,3 +15,6 @@ redis==8.0.1
 django-redis==7.0.0
 # BE-002 catalog proxy — HTTP client with first-class timeouts (research.md §1).
 httpx==0.28.1
+# BE-004 security hardening (PyPI lookup 2026-07-25, specs/004-security-hardening/research.md).
+django-cors-headers==4.9.0
+sentry-sdk==2.66.1

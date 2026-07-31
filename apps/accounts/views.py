@@ -20,9 +20,12 @@ from apps.accounts.serializers import (
 from apps.accounts.services import social, tokens
 from core.errors import ErrorCode
 from core.exceptions import AppError
+from core.throttling import AuthRateThrottle
 
 
 class RegisterView(APIView):
+    throttle_classes = [AuthRateThrottle]
+
     def post(self, request: Request) -> Response:
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -38,6 +41,8 @@ class RegisterView(APIView):
 
 
 class LoginView(APIView):
+    throttle_classes = [AuthRateThrottle]
+
     def post(self, request: Request) -> Response:
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -50,6 +55,8 @@ class LoginView(APIView):
 
 
 class SocialLoginView(APIView):
+    throttle_classes = [AuthRateThrottle]
+
     def post(self, request: Request) -> Response:
         serializer = SocialLoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -60,6 +67,8 @@ class SocialLoginView(APIView):
 
 
 class RefreshView(APIView):
+    throttle_classes = [AuthRateThrottle]
+
     def post(self, request: Request) -> Response:
         serializer = RefreshSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -73,11 +82,15 @@ class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request: Request) -> Response:
+        # Per-session logout (FR-008): revoke only the presented refresh token.
+        # Missing / already-revoked / invalid token → idempotent 204 (FR-011),
+        # never a 500 or an accidental all-device logout.
         raw_refresh = request.data.get("refresh_token")
         if raw_refresh:
-            tokens.revoke(raw_refresh)
-        else:
-            tokens.revoke_all(request.user)
+            try:
+                tokens.revoke(raw_refresh)
+            except AppError:
+                pass
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
