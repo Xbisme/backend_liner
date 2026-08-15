@@ -12,6 +12,9 @@ riêng, xem `api-context.md`.
 - Scaffolding repo: `README.md`, `.gitignore`, `.env.example`.
 - `.claude/dev-workflow.md` (Spec Kit + Contract Sync), `.claude/changelog.md`,
   `.claude/decisions/` (ADR).
+- **CI GitHub Actions** (PR #5, commit `75d3dbe`): workflow chạy lint (`ruff`,
+  `black --check`), type check (`mypy`) và `pytest` trên push/PR vào `main`; kèm
+  branch protection cho `main` (merge qua PR).
 
 ### Changed
 - Chuyển `openapi.yaml` → `contracts/openapi.yaml` và `screen-inventory.md` →
@@ -81,8 +84,8 @@ riêng, xem `api-context.md`.
   `AlbumDetailSerializer`/`ArtistDetailSerializer`. Additive → không breaking. Bump
   contract `v0.1.0 → v0.2.0`.
 
-- **BE-004 Security Hardening & Production Readiness — triển khai xong** (branch
-  `BE-004-security-hardening`): cross-cutting ở `core/` + `config/settings/`, không
+- **BE-004 Security Hardening & Production Readiness — đã merge vào `main`** (PR #4,
+  merge commit `7c6092c`): cross-cutting ở `core/` + `config/settings/`, không
   app/model mới → không migration. (1) **Rate limiting**: `core/throttling.py`
   (throttle per-scope: auth per-IP fail-closed, catalog per-IP, ghi `/me/*` per-user,
   history per-user — fail-open khi Redis lỗi); rates settings-driven
@@ -118,9 +121,10 @@ riêng, xem `api-context.md`.
   thật. Không breaking (Constitution VI: tunable env-driven).
 
 ### Status
-- Contract **`v0.3.0`** (draft) chờ freeze #000 cùng repo mobile. BE-001 + BE-002
-  + **BE-003 (User Library) đã merge vào `main`** (PR #3, commit `9c7a87f`; kèm
-  catalog `AlbumDetail`/`ArtistDetail` cho MO-002). **BE-004 (Security Hardening)
-  triển khai xong** trên branch `BE-004-security-hardening`, chờ review/merge. Spec
-  kế tiếp: **BE-005 (Deploy & Launch)**. ⚠️ Treo: báo mobile MO-002 + freeze
-  contract #000 (gồm `RATE_LIMITED`).
+- **BE-001 → BE-004 đã merge hết vào `main`** (PR #1 `6471d2b`, #2 `81cbabe`,
+  #3 `9c7a87f`, #4 `7c6092c`); CI (PR #5) đang gác `main`. Contract **`v0.3.0`**
+  (draft) chờ freeze #000. Spec kế tiếp: **BE-005 (Deploy & Launch)**.
+- ⚠️ **Treo, cần làm trước BE-005**: repo mobile còn ở contract **v0.2.0** → copy
+  `contracts/openapi.yaml` + `.claude/api-context.md` + `docs/screen-inventory.md`
+  sang mobile; báo MO-002 (mock → API thật, kèm `AlbumDetail`/`ArtistDetail`) và
+  yêu cầu client xử lý `429 RATE_LIMITED` + `Retry-After`; rồi freeze #000.
