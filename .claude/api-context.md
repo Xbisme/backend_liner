@@ -2,7 +2,7 @@
 
 > Companion đọc-được-cho-người/LLM của [`contracts/openapi.yaml`](../contracts/openapi.yaml), suy ra từ [`docs/screen-inventory.md`](../docs/screen-inventory.md). Tồn tại độc lập ở CẢ 2 REPO, đồng bộ tay (xem "Contract Sync" trong `dev-workflow.md`).
 >
-> Last updated: 2026-07-25 · Contract version: **`v0.2.0`** (MO-002: thêm `AlbumDetail`/`ArtistDetail` cho Detail track list)
+> Last updated: 2026-07-25 · Contract version: **`v0.3.0`** (BE-004: thêm mã lỗi `RATE_LIMITED` 429 + header `Retry-After`)
 
 ## Quy ước chung
 
@@ -36,8 +36,22 @@ Giống chuẩn LiveCanvas: `?cursor=...&limit=...` → `{ items, next_cursor, h
 | `TRACK_ALREADY_IN_PLAYLIST` | 409 | Thêm track đã có sẵn trong playlist |
 | `REORDER_MISMATCH` | 400 | `track_ids` gửi lên không khớp track thực tế trong playlist |
 | `CATALOG_UPSTREAM_ERROR` | 502 | Jamendo API lỗi/timeout — client nên retry sau vài giây |
+| `RATE_LIMITED` | 429 | Vượt hạn mức tần suất — client thử lại sau `Retry-After` giây (BE-004) |
 
 Format chung: `{ "error": { "code": "...", "message": "..." } }`
+
+### Rate limiting (BE-004)
+
+Một số nhóm endpoint bị giới hạn tần suất; vượt hạn mức → `429 RATE_LIMITED` kèm header **`Retry-After`** (giây). Ngưỡng là settings-driven (env), điều chỉnh không đổi contract.
+
+| Nhóm | Định danh throttle | Env ngưỡng (mặc định) |
+|---|---|---|
+| `/auth/login\|register\|social-login` | theo IP (chống brute-force) | `THROTTLE_AUTH` (10/min) |
+| `GET /catalog/*` | theo IP (per-device; `X-App-Key` là secret dùng chung nên không dùng làm bucket) | `THROTTLE_CATALOG` (120/min) |
+| ghi `/me/*` (playlist/liked CRUD) | theo user | `THROTTLE_USER` (60/min) |
+| `POST /me/history` | theo user (cao hơn — tua/skip nhanh) | `THROTTLE_HISTORY` (120/min) |
+
+Client nên tôn trọng `Retry-After` và hiển thị thông báo "thao tác quá nhanh, thử lại sau" (đặc biệt màn đăng nhập/tìm kiếm).
 
 ---
 

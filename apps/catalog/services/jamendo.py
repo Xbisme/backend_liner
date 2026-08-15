@@ -9,12 +9,13 @@ Raw upstream errors/URLs are logged redacted, never returned to clients.
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any
 
 import httpx
 from django.conf import settings
 
-from apps.catalog.constants import JAMENDO_TRACK_INCLUDE, JAMENDO_TRENDING_ORDER
+from apps.catalog.constants import JAMENDO_TRACK_INCLUDE
 from core.errors import ErrorCode
 from core.exceptions import AppError
 
@@ -42,18 +43,38 @@ def _base_params() -> dict[str, Any]:
 def _request(entity: str, params: dict[str, Any]) -> dict[str, Any]:
     """GET ``/{entity}`` and return parsed JSON, or raise CATALOG_UPSTREAM_ERROR."""
     merged = {**_base_params(), **params}
+    started = time.monotonic()
     try:
         response = _http().get(f"/{entity}", params=merged)
         response.raise_for_status()
         payload: dict[str, Any] = response.json()
+    except httpx.HTTPStatusError as exc:
+        # Context for diagnosis (FR-014): endpoint, status, latency — never the
+        # URL (carries client_id) or raw body.
+        logger.warning(
+            "Jamendo upstream error on %s: status=%s latency=%.0fms",
+            entity,
+            exc.response.status_code,
+            (time.monotonic() - started) * 1000,
+        )
+        raise AppError(ErrorCode.CATALOG_UPSTREAM_ERROR) from exc
     except (httpx.HTTPError, ValueError) as exc:
-        # Log the class only — never the URL (carries client_id) or raw body.
-        logger.warning("Jamendo upstream error on %s: %s", entity, type(exc).__name__)
+        logger.warning(
+            "Jamendo upstream error on %s: %s latency=%.0fms",
+            entity,
+            type(exc).__name__,
+            (time.monotonic() - started) * 1000,
+        )
         raise AppError(ErrorCode.CATALOG_UPSTREAM_ERROR) from exc
 
     headers = payload.get("headers") or {}
     if headers.get("status") != "success":
-        logger.warning("Jamendo returned non-success status on %s", entity)
+        logger.warning(
+            "Jamendo non-success on %s: upstream_status=%s latency=%.0fms",
+            entity,
+            headers.get("status"),
+            (time.monotonic() - started) * 1000,
+        )
         raise AppError(ErrorCode.CATALOG_UPSTREAM_ERROR)
     return payload
 
@@ -92,7 +113,7 @@ def list_tracks(
 def trending(*, tag: str | None = None, size: int = 50) -> list[dict[str, Any]]:
     params: dict[str, Any] = {
         "limit": size,
-        "order": JAMENDO_TRENDING_ORDER,
+        "order": settings.JAMENDO_TRENDING_ORDER,
         "audioformat": settings.JAMENDO_AUDIOFORMAT,
         "include": JAMENDO_TRACK_INCLUDE,
     }

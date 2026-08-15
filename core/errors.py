@@ -23,6 +23,7 @@ class ErrorCode:
     TRACK_ALREADY_IN_PLAYLIST = "TRACK_ALREADY_IN_PLAYLIST"
     REORDER_MISMATCH = "REORDER_MISMATCH"
     CATALOG_UPSTREAM_ERROR = "CATALOG_UPSTREAM_ERROR"
+    RATE_LIMITED = "RATE_LIMITED"
     INTERNAL_ERROR = "INTERNAL_ERROR"
 
 
@@ -76,6 +77,10 @@ ERROR_MAP: dict[str, tuple[int, str]] = {
     ErrorCode.CATALOG_UPSTREAM_ERROR: (
         status.HTTP_502_BAD_GATEWAY,
         "Upstream catalog error, retry shortly.",
+    ),
+    ErrorCode.RATE_LIMITED: (
+        status.HTTP_429_TOO_MANY_REQUESTS,
+        "Too many requests, retry later.",
     ),
     ErrorCode.INTERNAL_ERROR: (
         status.HTTP_500_INTERNAL_SERVER_ERROR,

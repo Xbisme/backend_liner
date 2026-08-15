@@ -10,8 +10,9 @@ from __future__ import annotations
 # Cache-key namespace — bump the version suffix to invalidate all catalog caches.
 CACHE_NAMESPACE = "catalog:v1"
 
-# Jamendo query behaviour.
-JAMENDO_TRENDING_ORDER = "popularity_month"
+# Jamendo query behaviour. NOTE: the trending ``order`` is env-driven
+# (settings.JAMENDO_TRENDING_ORDER) — Jamendo's time-windowed popularity_* orders
+# return empty on the free tier, so it must be tunable without a code change.
 JAMENDO_TRACK_INCLUDE = "musicinfo+licenses"
 
 # Map a Creative Commons deed URL (Jamendo ``license_ccurl``) to its human label.

@@ -3,7 +3,9 @@
 > **Vai trò**: Bước làm TRƯỚC khi chốt API. `contracts/openapi.yaml` và `.claude/api-context.md` được suy ra từ file này.
 > File tồn tại độc lập ở CẢ 2 REPO (`soundwave-backend`, `soundwave-mobile`), đồng bộ tay.
 >
-> Last updated: 2026-07-25 · Contract version tương ứng: `v0.2.0` (MO-002: Album/Artist Detail có track list)
+> Last updated: 2026-07-25 · Contract version tương ứng: `v0.3.0` (BE-004: rate limiting — mã lỗi `RATE_LIMITED` 429)
+>
+> **Cross-cutting (BE-004)**: mọi màn gọi API có thể nhận `429 RATE_LIMITED` (kèm header `Retry-After`) nếu thao tác quá nhanh — đặc biệt **Onboarding/Login** (chống brute-force, per-IP), **Search/Discover** (catalog per-IP), và **Now Playing** log lịch sử (per-user). Client hiển thị "thao tác quá nhanh, thử lại sau" và tôn trọng `Retry-After`.
 
 ## Bối cảnh khác biệt so với LiveCanvas
 

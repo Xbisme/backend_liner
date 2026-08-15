@@ -39,6 +39,7 @@ from apps.library.serializers import (
 from apps.library.services import history as history_service
 from apps.library.services import likes as like_service
 from apps.library.services import playlists as playlist_service
+from core.throttling import HistoryRateThrottle, WriteThrottleMixin
 
 COVER_TRACK_LIMIT = playlist_service.COVER_TRACK_LIMIT
 
@@ -48,7 +49,7 @@ def _user(request: Request) -> User:
     return cast(User, request.user)
 
 
-class PlaylistListCreateView(APIView):
+class PlaylistListCreateView(WriteThrottleMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request: Request) -> Response:
@@ -95,7 +96,7 @@ class PlaylistListCreateView(APIView):
         )
 
 
-class PlaylistDetailView(APIView):
+class PlaylistDetailView(WriteThrottleMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request: Request, playlist_id: int) -> Response:
@@ -124,7 +125,7 @@ class PlaylistDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class PlaylistTracksView(APIView):
+class PlaylistTracksView(WriteThrottleMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request: Request, playlist_id: int) -> Response:
@@ -135,7 +136,7 @@ class PlaylistTracksView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class PlaylistTrackDeleteView(APIView):
+class PlaylistTrackDeleteView(WriteThrottleMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def delete(self, request: Request, playlist_id: int, track_id: str) -> Response:
@@ -144,7 +145,7 @@ class PlaylistTrackDeleteView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class PlaylistReorderView(APIView):
+class PlaylistReorderView(WriteThrottleMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def patch(self, request: Request, playlist_id: int) -> Response:
@@ -171,7 +172,7 @@ class LikedTracksView(APIView):
         )
 
 
-class LikedTrackDetailView(APIView):
+class LikedTrackDetailView(WriteThrottleMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request: Request, track_id: str) -> Response:
@@ -183,8 +184,9 @@ class LikedTrackDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class HistoryView(APIView):
+class HistoryView(WriteThrottleMixin, APIView):
     permission_classes = [IsAuthenticated]
+    write_throttle = HistoryRateThrottle
 
     def get(self, request: Request) -> Response:
         paginator = HistoryCursorPage()

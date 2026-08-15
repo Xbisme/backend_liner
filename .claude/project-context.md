@@ -3,7 +3,7 @@
 > Repo: `soundwave-backend` (Django + DRF)
 > Repo liên quan: `soundwave-mobile` (Flutter) — độc lập, đồng bộ qua `contracts/openapi.yaml` + `.claude/api-context.md`
 >
-> Last updated: 2026-07-25 (BE-001 + BE-002 Catalog Proxy đã merge vào main; BE-003 User Library là spec kế tiếp)
+> Last updated: 2026-07-25 (BE-001 + BE-002 + BE-003 User Library đã merge vào main; BE-004 Security Hardening là spec kế tiếp)
 
 ## Snapshot
 
@@ -17,9 +17,9 @@
 
 ## Current Focus
 
-- **Trạng thái**: BE-001 (Auth) + BE-002 (Catalog Proxy) đã merge vào `main`. **BE-003 (User Library) triển khai xong** trên branch `BE-003-user-library` — `apps/library` (playlist/liked/history, toàn bộ `/me/*`, IDOR-proof, hydrate metadata qua catalog), **104 test toàn repo pass**, chờ review/merge. Kèm catalog `AlbumDetail`/`ArtistDetail` (contract **v0.2.0**, yêu cầu mobile MO-002).
+- **Trạng thái**: BE-001 + BE-002 + BE-003 đã merge vào `main`. **BE-004 (Security Hardening) triển khai xong** trên branch `BE-004-security-hardening` — rate limiting (per-scope, fail-open/closed), token lifecycle hardening (logout per-session, fail-fast khóa ký JWT), Sentry + scrub, CORS, IDOR sweep, cache load, OWASP review. Cross-cutting ở `core/`, **không model/migration mới**. **134 test toàn repo pass**; black/ruff/mypy xanh. Contract **v0.3.0** (thêm `RATE_LIMITED` 429). Chờ review/merge. **Spec kế tiếp: BE-005 (Deploy & Launch)**.
 - **Đã có sẵn**: `docs/screen-inventory.md`, `contracts/openapi.yaml` **v0.2.0**, `.claude/api-context.md` v0.2.0 (draft, chờ review cùng phía mobile), `.specify/memory/constitution.md` v1.0.0, `.claude/dev-workflow.md`, `.claude/changelog.md`, `.claude/decisions/`, `specs/003-user-library/`.
-- **Spec tiếp theo**: merge BE-003 (báo mobile MO-002: catalog thật + album/artist detail) → `BE-004-security-hardening`.
+- **Spec tiếp theo**: `BE-005-deploy-launch` (sau khi merge BE-004). **Đang treo**: báo mobile MO-002 (catalog thật + album/artist detail đã sẵn sàng) + freeze contract #000 cùng repo mobile (gồm `RATE_LIMITED` v0.3.0).
 - **Đã quyết định**: Jamendo client_id thật (đã cấu hình trong `.env`); cache TTL theo loại (`CACHE_TTL_*` trong settings); genres = danh sách curated trong settings (`CATALOG_GENRES`).
 - **Chưa quyết định**:
   - Google/Apple Sign-In credentials thật cho production (hiện `.env` để placeholder).

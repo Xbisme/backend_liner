@@ -41,13 +41,38 @@ requirements/      # base.txt, dev.txt, production.txt
 .claude/           # project-context, sdd-roadmap, api-context, dev-workflow, ...
 ```
 
-## Bắt đầu
+## Bắt đầu (dev)
+
+**Yêu cầu**: Python 3.12+, PostgreSQL, Redis.
 
 ```bash
-cp .env.example .env          # điền secrets thật
-# (BE-001 sẽ thêm) python -m venv .venv && pip install -r requirements/dev.txt
-# (BE-001 sẽ thêm) python manage.py migrate && python manage.py runserver
+# 1. Dịch vụ nền (macOS/brew — hoặc dùng Docker tùy ý)
+brew services start postgresql@16
+brew services start redis
+
+# 2. Tạo DB role + database (khớp DATABASE_URL trong .env.example)
+psql -h localhost -d postgres -c "CREATE ROLE soundwave WITH LOGIN PASSWORD 'soundwave' CREATEDB;"
+psql -h localhost -d postgres -c "CREATE DATABASE soundwave OWNER soundwave;"
+
+# 3. Cấu hình môi trường
+cp .env.example .env          # điền JAMENDO_CLIENT_ID thật; các key khác có default hợp lý
+
+# 4. Virtualenv + deps
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements/dev.txt
+
+# 5. Migrate + chạy
+python manage.py migrate
+python manage.py runserver
 ```
+
+> **Dev**: `DJANGO_SECRET_KEY` mặc định ngắn vẫn chạy được vì `DEBUG=True`. Social
+> login (Google/Apple) chỉ verify token thật khi điền credentials thật; token sai
+> trả `400 SOCIAL_TOKEN_INVALID`. Sentry tắt khi `SENTRY_DSN` trống.
+>
+> **Production**: `DJANGO_SECRET_KEY` **bắt buộc ≥ 32 bytes** (không boot nếu ngắn),
+> đặt `NUM_PROXIES` theo reverse proxy, `CORS_ALLOWED_ORIGINS` allowlist, `SENTRY_DSN`,
+> Google/Apple credentials thật. Xem `specs/004-security-hardening/quickstart.md`.
 
 ## Quy trình phát triển
 
