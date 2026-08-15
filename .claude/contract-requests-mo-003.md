@@ -156,6 +156,33 @@ Ghi ra đây để backend khỏi phải nới ngưỡng throttle:
   `User.email` nullable ở Settings; page size ≤50; thêm `RATE_LIMITED` vào
   `AppFailure` + i18n en/vi.
 
+## ✅ Phản hồi backend — 2026-08-16 (contract `v0.4.0`)
+
+Toàn bộ yêu cầu **đã làm xong** ở branch `fix/mo-003-contract-requests`
+(soundwave-backend PR #7), 139 test pass. Contract `v0.3.0` → **`v0.4.0`**; ba file
+đã copy sang repo này cùng lúc.
+
+| Mục | Kết quả |
+|---|---|
+| **R1** `HistoryEntry` | ✅ Làm. `GET /me/history` trả `HistoryCursorPage`, item là `HistoryEntry { track, played_at, completed }`. Đúng như phân tích: dữ liệu đã có sẵn, chỉ serializer chưa expose. |
+| **R2** trần playlist | ✅ Làm. `PLAYLIST_MAX_TRACKS` env-driven, **mặc định 500**; vượt trần → **`PLAYLIST_FULL` (409)** như mobile đề xuất (không tái dùng `VALIDATION_ERROR`). Trần đếm số row hiện tại, nên xóa bớt là thêm được tiếp. |
+| **R3** `HISTORY_MAX_ENTRIES` | ✅ Ghi vào `api-context.md` mục `GET /me/history`: **100**. |
+| **Mục 2 (a)(b)(c)** tombstone | ✅ Ghi vào contract: `PlaylistDetail.tracks` mô tả rõ tombstone giữ nguyên vị trí và `track_count` bao gồm chúng; `ReorderPlaylistRequest.track_ids` mô tả rõ **bắt buộc gồm id tombstone** kèm hệ quả UI; `DELETE .../tracks/{id}` ghi rõ idempotent + xóa được tombstone. |
+| **Mục 2 (d)** `Retry-After` | ✅ Ghi "optional" vào mục Rate limiting — client cần backoff mặc định khi thiếu header. |
+| **Mục 4** bug `cover_url` | ✅ Sửa. `PATCH /me/playlists/{id}` nay trả `cover_url` tính thật, dùng chung payload với `GET /me/playlists` → mobile **không cần refetch** sau rename nữa. |
+
+**Việc phía mobile**: regenerate Dart client theo `v0.4.0`; màn History map sang
+`HistoryEntry` (dùng `played_at` để group theo ngày, danh sách hữu hạn ~100 mục);
+thêm `PLAYLIST_FULL` vào `AppFailure` + i18n en/vi.
+
+**Ghi nhận mục 5**: các ràng buộc mobile tự xử (debounce like, reorder gọi 1 lần khi
+thả, tombstone không vào queue) đã đọc — backend **không nới ngưỡng throttle**.
+
+**Contract freeze #000**: sau đợt này hai repo cùng ở `v0.4.0`. Backend đề xuất freeze
+ngay sau khi PR #7 merge, trước khi MO-003/BE-005 chạy tiếp.
+
+---
+
 ## 6. Cần backend phản hồi
 
 **Không có gì chặn mobile chạy `speckit-plan` MO-003** — Q1/Q2/Q4 của bản nháp
