@@ -3,7 +3,7 @@
 > Repo: `soundwave-backend` (Django + DRF)
 > Repo liên quan: `soundwave-mobile` (Flutter) — độc lập, đồng bộ qua `contracts/openapi.yaml` + `.claude/api-context.md`
 >
-> Last updated: 2026-07-25 (BE-001 + BE-002 + BE-003 User Library đã merge vào main; BE-004 Security Hardening là spec kế tiếp)
+> Last updated: 2026-08-16 (BE-001 → BE-004 đã merge vào main; BE-005 Deploy & Launch là spec kế tiếp)
 
 ## Snapshot
 
@@ -17,13 +17,13 @@
 
 ## Current Focus
 
-- **Trạng thái**: BE-001 + BE-002 + BE-003 đã merge vào `main`. **BE-004 (Security Hardening) triển khai xong** trên branch `BE-004-security-hardening` — rate limiting (per-scope, fail-open/closed), token lifecycle hardening (logout per-session, fail-fast khóa ký JWT), Sentry + scrub, CORS, IDOR sweep, cache load, OWASP review. Cross-cutting ở `core/`, **không model/migration mới**. **134 test toàn repo pass**; black/ruff/mypy xanh. Contract **v0.3.0** (thêm `RATE_LIMITED` 429). Chờ review/merge. **Spec kế tiếp: BE-005 (Deploy & Launch)**.
-- **Đã có sẵn**: `docs/screen-inventory.md`, `contracts/openapi.yaml` **v0.2.0**, `.claude/api-context.md` v0.2.0 (draft, chờ review cùng phía mobile), `.specify/memory/constitution.md` v1.0.0, `.claude/dev-workflow.md`, `.claude/changelog.md`, `.claude/decisions/`, `specs/003-user-library/`.
-- **Spec tiếp theo**: `BE-005-deploy-launch` (sau khi merge BE-004). **Đang treo**: báo mobile MO-002 (catalog thật + album/artist detail đã sẵn sàng) + freeze contract #000 cùng repo mobile (gồm `RATE_LIMITED` v0.3.0).
+- **Trạng thái**: BE-001 → BE-004 **đã merge hết vào `main`**. BE-004 (Security Hardening, PR #4, merge commit `7c6092c`) mang theo rate limiting (per-scope, fail-open/closed), token lifecycle hardening (logout per-session, fail-fast khóa ký JWT), Sentry + scrub, CORS, IDOR sweep, cache load, OWASP review — cross-cutting ở `core/`, **không model/migration mới**, **134 test toàn repo pass**. Contract **v0.3.0** (thêm `RATE_LIMITED` 429). Repo cũng đã có **CI GitHub Actions** (lint/types/tests) + branch protection trên `main`. **Spec kế tiếp: BE-005 (Deploy & Launch)**.
+- **Đã có sẵn**: `docs/screen-inventory.md`, `contracts/openapi.yaml` **v0.3.0**, `.claude/api-context.md` **v0.3.0** (draft, chờ freeze cùng phía mobile), `.specify/memory/constitution.md` v1.0.0, `.claude/dev-workflow.md`, `.claude/changelog.md`, `.claude/decisions/` (ADR 0001-0002), `specs/001-…` → `specs/004-security-hardening/`, `.github/workflows/`.
+- **Spec tiếp theo**: `BE-005-deploy-launch`. **Đang treo (ưu tiên trước BE-005)**: (1) báo mobile MO-002 — catalog thật + album/artist detail đã sẵn sàng, client cần xử lý `429 RATE_LIMITED` + `Retry-After`; (2) copy 3 file contract sang repo mobile (mobile còn ở **v0.2.0**); (3) freeze contract #000.
 - **Đã quyết định**: Jamendo client_id thật (đã cấu hình trong `.env`); cache TTL theo loại (`CACHE_TTL_*` trong settings); genres = danh sách curated trong settings (`CATALOG_GENRES`).
 - **Chưa quyết định**:
   - Google/Apple Sign-In credentials thật cho production (hiện `.env` để placeholder).
-  - Freeze contract #000 chính thức cùng repo mobile (gồm 2 refinement pre-freeze: `User.email` nullable + `LimitParam` max 50).
+  - Freeze contract #000 chính thức cùng repo mobile — gồm 6 refinement pre-freeze đã tích tụ: `User.email` nullable (BE-001); `LimitParam` max 100→50 + schema `Artist`/`Album` (BE-002); `Track.available` + metadata nullable (tombstone) và `LogHistoryRequest.played_at` optional (BE-003); `AlbumDetail`/`ArtistDetail` (v0.2.0, MO-002); `RATE_LIMITED` 429 + `Retry-After` (v0.3.0, BE-004). Tất cả additive/nới lỏng → không breaking.
 
 ## Repo Layout
 

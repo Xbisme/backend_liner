@@ -25,8 +25,13 @@
 | 6 | **Mini Player** (persistent bar) | Track hiện tại rút gọn | Play/Pause, tap → mở Now Playing | — (dùng lại state Now Playing) |
 | 7 | **Library — Playlists** | Danh sách playlist của user | Tạo playlist mới, tap → Playlist Detail | `GET /me/playlists`, `POST /me/playlists` |
 | 8 | **Playlist Detail** | Track trong playlist, thứ tự | Thêm/xóa track, đổi thứ tự, đổi tên/xóa playlist | `GET /me/playlists/{id}`, `POST/DELETE /me/playlists/{id}/tracks`, `PATCH /me/playlists/{id}` |
-| 9 | **Library — Liked Songs** | Danh sách track đã like | Bỏ thích, tap → Player | `GET /me/liked-tracks` |
-| 10 | **Profile/Settings** | Thông tin tài khoản | Đăng xuất, xóa tài khoản | `GET /me`, `DELETE /me` |
+| 9 | **Library — Liked Songs** | Danh sách track đã like | Bỏ thích, tap → Player | `GET /me/liked-tracks`, `POST/DELETE /me/liked-tracks/{track_id}` |
+| 10 | **Library — History** | Lịch sử nghe theo thứ tự mới nhất (cursor) | Tap → Player | `GET /me/history` (ghi bằng `POST /me/history` từ Player) |
+| 11 | **Profile/Settings** | Thông tin tài khoản | Đăng xuất, xóa tài khoản | `GET /me`, `DELETE /me` |
+
+> **Ghi chú 2026-08-16 (từ repo mobile)**: màn **History (#10)** trước đây bị thiếu
+> trong bảng dù `GET /me/history` đã có sẵn trong contract `v0.2.0` — bổ sung để khớp
+> scope MO-003. **Không bump contract version** vì không thêm/sửa endpoint nào.
 
 ## Quyết định đã chốt (ảnh hưởng response schema)
 

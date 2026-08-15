@@ -1,7 +1,7 @@
 # SoundWave Backend v1.0 — Spec Roadmap
 
 > Repo: `soundwave-backend`. Track song song bên `soundwave-mobile` (spec `MO-NNN`).
-> Last updated: 2026-07-25 (BE-001 + BE-002 + BE-003 User Library đã merge; BE-004 Security Hardening là spec kế tiếp)
+> Last updated: 2026-08-16 (BE-001 → BE-004 đã merge; BE-005 Deploy & Launch là spec kế tiếp)
 
 ## Dependency Graph
 
@@ -38,7 +38,7 @@ BE-005: Deploy & Launch Support
 ## Spec Details
 
 ### Spec #000: API Contract Freeze
-- **Status**: 🟡 In progress
+- **Status**: 🟡 In progress — backend ở **v0.3.0**, repo mobile còn **v0.2.0** → cần copy 3 file sang mobile trước khi freeze. Đã tích tụ 6 refinement pre-freeze (xem "Chưa quyết định" trong `project-context.md`), tất cả additive/nới lỏng.
 - Review `contracts/openapi.yaml` + `.claude/api-context.md` cùng repo mobile. Thứ tự bắt buộc: `docs/screen-inventory.md` trước, rồi mới tới contract.
 
 ### BE-001: Backend Foundation & Auth
@@ -60,12 +60,13 @@ BE-005: Deploy & Launch Support
 - **Scope**: `apps/library` — model `Playlist`, `PlaylistTrack` (lưu `track_id` Jamendo + thứ tự), `LikedTrack`, `ListeningHistory`; toàn bộ endpoint `/me/*`; kiểm tra `FORBIDDEN` khi thao tác playlist không thuộc user hiện tại (không dựa vào client tự khai `user_id`).
 
 ### BE-004: Security Hardening & Production Readiness
-- **Status**: ✅ Triển khai xong (branch `BE-004-security-hardening`) — chờ review/merge. 134 test pass. Xem `changelog.md` + `specs/004-security-hardening/`. Contract v0.3.0 (`RATE_LIMITED`).
-- **Branch**: `BE-004-security-hardening`
+- **Status**: ✅ Đã merge vào `main` (PR #4, merge commit `7c6092c`). 134 test pass. Xem `changelog.md` + `specs/004-security-hardening/`. Contract v0.3.0 (`RATE_LIMITED`). ⚠️ Cần báo mobile: client phải xử lý `429` + `Retry-After`.
+- **Branch**: `BE-004-security-hardening` (đã merge)
 - **Depends on**: BE-003
 - **Scope**: Rate limit theo user (chống spam `/me/history`), refresh token rotation + blacklist khi logout, Sentry, load test cache layer catalog, OWASP review (đặc biệt IDOR ở `/me/playlists/{id}`).
 
 ### BE-005: Deploy & Launch Support
+- **Status**: ⬜ Chưa bắt đầu — **spec kế tiếp**. Chặn mềm bởi 2 việc treo: contract sync sang mobile (v0.3.0) + freeze #000; và quyết định credentials Google/Apple production.
 - **Branch**: `BE-005-deploy-launch`
 - **Depends on**: BE-004
 - **Scope**: Staging → Production, backup PostgreSQL định kỳ, runbook.
