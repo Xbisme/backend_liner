@@ -106,6 +106,21 @@ riêng, xem `api-context.md`.
   `screen-inventory.md` (ghi chú cross-cutting). Bump `v0.2.0 → v0.3.0`. ⚠️ Đồng bộ
   mobile khi freeze #000.
 
+- **Contract `v0.4.0` (yêu cầu MO-003)** — xử lý `.claude/contract-requests-mo-003.md`
+  từ repo mobile. **Breaking** (đầu tiên kể từ khi có contract): `GET /me/history` trả
+  **`HistoryCursorPage`** với item là **`HistoryEntry { track, played_at, completed }`**
+  thay cho `Track` — dữ liệu đã có sẵn trong `ListeningHistory` và queryset đã sort theo
+  `played_at`, chỉ tầng serializer chưa expose (R1); màn History nhờ đó group được theo
+  ngày. Chi phí phía mobile = 0 vì màn History chưa build. Thêm **`PLAYLIST_MAX_TRACKS`**
+  (env, mặc định 500) + mã lỗi **`PLAYLIST_FULL` (409)** — playlist detail cố ý không
+  phân trang nên trần là thứ giữ cho response và payload `reorder` hữu hạn (R2). Tài liệu
+  hóa 5 hành vi đã tồn tại nhưng chưa ghi ở contract: tombstone nằm trong
+  `PlaylistDetail.tracks` và được tính vào `track_count`; `reorder` bắt buộc gồm cả id
+  tombstone (ẩn khỏi UI → `REORDER_MISMATCH`); `DELETE .../tracks/{id}` idempotent và
+  xóa được tombstone; `Retry-After` là **optional**; `HISTORY_MAX_ENTRIES` = 100 (R3).
+  5 test mới; **139 test toàn repo pass**; black/ruff/mypy xanh; không migration, không
+  dep mới. ⚠️ Đồng bộ mobile trước khi merge (contract v0.3.0 → v0.4.0).
+
 ### Fixed
 - **Google social-login trả 500 thay vì 400** (phát hiện khi curl end-to-end): dep
   `requests` thiếu — `google.auth.transport.requests` cần nó nhưng `google-auth`
@@ -113,6 +128,12 @@ riêng, xem `api-context.md`.
   ẩn (test mock `verify_social_token` nên đường verify thật chưa từng chạy). Thêm
   `requests==2.34.2` vào `requirements/base.txt`. Nay token sai → `400
   SOCIAL_TOKEN_INVALID` đúng chuẩn.
+- **`PATCH /me/playlists/{id}` luôn trả `cover_url: null`** (mobile phát hiện khi đọc
+  code cho MO-003): `PlaylistDetailView.patch` hardcode `cover_url=None` trong khi
+  `GET /me/playlists` tính cover thật từ 4 track đầu — response rename sai contract với
+  playlist không rỗng, làm client mất ảnh bìa nếu cập nhật state từ response. Nay dùng
+  chung `_summary_payload` (hydrate ≤4 track đầu) cho cả hai đường. Test cũ không bắt
+  được vì chỉ assert `name`; thêm `test_rename_keeps_real_cover_url`.
 - **Catalog trending trả rỗng** (phát hiện khi curl thật lúc review BE-004): Jamendo
   order `popularity_month`/`popularity_week` trả 0 kết quả ở free tier. Chuyển
   `JAMENDO_TRENDING_ORDER` từ hằng số `constants.py` → **settings env-driven**
@@ -121,6 +142,10 @@ riêng, xem `api-context.md`.
   thật. Không breaking (Constitution VI: tunable env-driven).
 
 ### Status
+- Contract **`v0.4.0`** (yêu cầu MO-003) đang ở branch `fix/mo-003-contract-requests`,
+  chờ review/merge + copy sang repo mobile. BE-005 (Deploy & Launch) đã có spec nháp
+  (`specs/005-deploy-launch/`, branch `BE-005-deploy-launch`) nhưng **tạm dừng** chờ 3
+  câu hỏi clarify.
 - **BE-001 → BE-004 đã merge hết vào `main`** (PR #1 `6471d2b`, #2 `81cbabe`,
   #3 `9c7a87f`, #4 `7c6092c`); CI (PR #5) đang gác `main`. Contract **`v0.3.0`**
   (draft) chờ freeze #000. Spec kế tiếp: **BE-005 (Deploy & Launch)**.

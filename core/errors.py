@@ -21,6 +21,7 @@ class ErrorCode:
     VALIDATION_ERROR = "VALIDATION_ERROR"
     NOT_FOUND = "NOT_FOUND"
     TRACK_ALREADY_IN_PLAYLIST = "TRACK_ALREADY_IN_PLAYLIST"
+    PLAYLIST_FULL = "PLAYLIST_FULL"
     REORDER_MISMATCH = "REORDER_MISMATCH"
     CATALOG_UPSTREAM_ERROR = "CATALOG_UPSTREAM_ERROR"
     RATE_LIMITED = "RATE_LIMITED"
@@ -69,6 +70,10 @@ ERROR_MAP: dict[str, tuple[int, str]] = {
     ErrorCode.TRACK_ALREADY_IN_PLAYLIST: (
         status.HTTP_409_CONFLICT,
         "Track already in playlist.",
+    ),
+    ErrorCode.PLAYLIST_FULL: (
+        status.HTTP_409_CONFLICT,
+        "Playlist is full.",
     ),
     ErrorCode.REORDER_MISMATCH: (
         status.HTTP_400_BAD_REQUEST,

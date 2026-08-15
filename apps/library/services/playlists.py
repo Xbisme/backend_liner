@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
@@ -51,11 +52,17 @@ def ordered_track_ids(playlist: Playlist) -> list[str]:
 
 
 def add_track(playlist: Playlist, track_id: str) -> None:
-    if PlaylistTrack.objects.filter(playlist=playlist, track_id=track_id).exists():
+    rows = PlaylistTrack.objects.filter(playlist=playlist)
+    if rows.filter(track_id=track_id).exists():
         raise AppError(ErrorCode.TRACK_ALREADY_IN_PLAYLIST)
-    max_pos = PlaylistTrack.objects.filter(playlist=playlist).aggregate(
-        m=Max("position")
-    )["m"]
+    if rows.count() >= settings.PLAYLIST_MAX_TRACKS:
+        # Detail responses are un-paginated and reorder submits every id, so the
+        # cap is what bounds both payloads (MO-003 R2).
+        raise AppError(
+            ErrorCode.PLAYLIST_FULL,
+            f"Playlist is full (max {settings.PLAYLIST_MAX_TRACKS} tracks).",
+        )
+    max_pos = rows.aggregate(m=Max("position"))["m"]
     next_pos = 0 if max_pos is None else max_pos + 1
     PlaylistTrack.objects.create(
         playlist=playlist, track_id=track_id, position=next_pos

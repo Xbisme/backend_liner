@@ -2,7 +2,7 @@
 
 > Companion đọc-được-cho-người/LLM của [`contracts/openapi.yaml`](../contracts/openapi.yaml), suy ra từ [`docs/screen-inventory.md`](../docs/screen-inventory.md). Tồn tại độc lập ở CẢ 2 REPO, đồng bộ tay (xem "Contract Sync" trong `dev-workflow.md`).
 >
-> Last updated: 2026-07-25 · Contract version: **`v0.3.0`** (BE-004: thêm mã lỗi `RATE_LIMITED` 429 + header `Retry-After`)
+> Last updated: 2026-08-16 · Contract version: **`v0.4.0`** (MO-003: `GET /me/history` trả `HistoryEntry` kèm `played_at` — **breaking**; thêm trần `PLAYLIST_MAX_TRACKS` + mã lỗi `PLAYLIST_FULL`)
 
 ## Quy ước chung
 
@@ -34,6 +34,7 @@ Giống chuẩn LiveCanvas: `?cursor=...&limit=...` → `{ items, next_cursor, h
 | `VALIDATION_ERROR` | 400 | Body/query sai định dạng |
 | `NOT_FOUND` | 404 | Resource không tồn tại |
 | `TRACK_ALREADY_IN_PLAYLIST` | 409 | Thêm track đã có sẵn trong playlist |
+| `PLAYLIST_FULL` | 409 | Playlist đã đạt trần `PLAYLIST_MAX_TRACKS` (mặc định 500) — client hiện "Playlist đã đầy" (MO-003) |
 | `REORDER_MISMATCH` | 400 | `track_ids` gửi lên không khớp track thực tế trong playlist |
 | `CATALOG_UPSTREAM_ERROR` | 502 | Jamendo API lỗi/timeout — client nên retry sau vài giây |
 | `RATE_LIMITED` | 429 | Vượt hạn mức tần suất — client thử lại sau `Retry-After` giây (BE-004) |
@@ -42,7 +43,9 @@ Format chung: `{ "error": { "code": "...", "message": "..." } }`
 
 ### Rate limiting (BE-004)
 
-Một số nhóm endpoint bị giới hạn tần suất; vượt hạn mức → `429 RATE_LIMITED` kèm header **`Retry-After`** (giây). Ngưỡng là settings-driven (env), điều chỉnh không đổi contract.
+Một số nhóm endpoint bị giới hạn tần suất; vượt hạn mức → `429 RATE_LIMITED`, kèm header **`Retry-After`** (giây) khi server tính được thời gian chờ. Ngưỡng là settings-driven (env), điều chỉnh không đổi contract.
+
+> **`Retry-After` là optional** — server chỉ set khi biết thời gian chờ; client MUST có backoff mặc định cho trường hợp thiếu header, không được coi đây là header luôn có.
 
 | Nhóm | Định danh throttle | Env ngưỡng (mặc định) |
 |---|---|---|
@@ -51,7 +54,15 @@ Một số nhóm endpoint bị giới hạn tần suất; vượt hạn mức �
 | ghi `/me/*` (playlist/liked CRUD) | theo user | `THROTTLE_USER` (60/min) |
 | `POST /me/history` | theo user (cao hơn — tua/skip nhanh) | `THROTTLE_HISTORY` (120/min) |
 
-Client nên tôn trọng `Retry-After` và hiển thị thông báo "thao tác quá nhanh, thử lại sau" (đặc biệt màn đăng nhập/tìm kiếm).
+Client nên tôn trọng `Retry-After` và hiển thị thông báo "thao tác quá nhanh, thử lại sau" (đặc biệt màn đăng nhập/tìm kiếm). Lưu ý: throttle ghi `/me/*` chỉ áp cho **method ghi** — đọc không bị chặn. Thao tác dễ dồn request (toggle like, kéo-thả reorder) nên được client debounce/coalesce trước khi gọi.
+
+### Track tombstone trong thư viện (nhắc lại, ảnh hưởng UI)
+
+`Track.available: false` chỉ xuất hiện ở response `/me/*` (catalog luôn `true`). Ba hệ quả client cần nắm:
+
+- **Không bị lọc bỏ**: `PlaylistDetail.tracks` giữ tombstone ở đúng vị trí; `track_count` đã tính cả chúng.
+- **`reorder` phải gồm id tombstone**: server so khớp toàn bộ tập track, không lọc theo `available` → ẩn tombstone khỏi UI kéo-thả sẽ gây `REORDER_MISMATCH`.
+- **Vẫn xóa được**: `DELETE /me/playlists/{id}/tracks/{track_id}` không tra nguồn nhạc nên dọn được track chết; gọi trên track không có sẵn → `204` no-op.
 
 ---
 
@@ -171,28 +182,33 @@ Tất cả yêu cầu `X-App-Key` + `Authorization: Bearer <access_token>`.
 - **201**: `Playlist` (rỗng, `track_count: 0`)
 
 ### `GET /me/playlists/{id}`
-- **200**: `PlaylistDetail` (kèm mảng `tracks`)
+- **200**: `PlaylistDetail` (kèm mảng `tracks`) — **không phân trang**: trả toàn bộ track theo thứ tự để client reorder được. Trần `PLAYLIST_MAX_TRACKS` giữ response hữu hạn.
+- Tombstone giữ nguyên vị trí trong `tracks`; `track_count == len(tracks)`.
 - **403**: `FORBIDDEN` (playlist người khác) · **404**: `NOT_FOUND`
 
 ### `PATCH /me/playlists/{id}`
-- Body: `{ "name": "Tên mới" }` · **200**: `Playlist`
+- Body: `{ "name": "Tên mới" }` · **200**: `Playlist` (đầy đủ, gồm `cover_url` tính thật như `GET /me/playlists` — client cập nhật thẳng state từ response được)
 
 ### `DELETE /me/playlists/{id}`
 - **204**: đã xóa · **403**: `FORBIDDEN`
 
 ### `POST /me/playlists/{id}/tracks`
 - Body: `{ "track_id": "1234567" }`
-- **204**: đã thêm (cuối danh sách) · **409**: `TRACK_ALREADY_IN_PLAYLIST`
+- **204**: đã thêm (cuối danh sách)
+- **409**: `TRACK_ALREADY_IN_PLAYLIST` (đã có) hoặc `PLAYLIST_FULL` (đạt trần `PLAYLIST_MAX_TRACKS`, mặc định 500) — phân biệt bằng `error.code`
 
 ### `DELETE /me/playlists/{id}/tracks/{track_id}`
-- **204**: đã xóa khỏi playlist
+- **204**: đã xóa khỏi playlist — **idempotent**: track không có trong playlist cũng trả `204`. Xóa được cả tombstone.
 
 ### `PATCH /me/playlists/{id}/tracks/reorder`
 - Body: `{ "track_ids": ["1234567", "998877", "..."] }` (toàn bộ danh sách theo thứ tự mới)
+- Phải là hoán vị đúng của tập track hiện có, **gồm cả id tombstone** (server không lọc theo `available`)
 - **200**: `PlaylistDetail` · **400**: `REORDER_MISMATCH`
 
 ### `GET /me/history`
-- Query: `cursor`, `limit` · **200**: `TrackCursorPage` (sắp theo `played_at` giảm dần)
+- Query: `cursor`, `limit` · **200**: `HistoryCursorPage` — `items` là `HistoryEntry { track, played_at, completed }`, sắp theo `played_at` giảm dần
+- `played_at` cho phép client group "Hôm nay / Hôm qua / Tuần này"
+- Danh sách **hữu hạn**: server chỉ giữ `HISTORY_MAX_ENTRIES` mục gần nhất mỗi user (mặc định **100**) — client không cần infinite scroll vô hạn
 
 ### `POST /me/history`
 - Body: `{ "track_id": "1234567", "played_at": "2026-07-24T20:10:00Z", "completed": true }`

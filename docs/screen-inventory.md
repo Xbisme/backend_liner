@@ -3,7 +3,7 @@
 > **Vai trò**: Bước làm TRƯỚC khi chốt API. `contracts/openapi.yaml` và `.claude/api-context.md` được suy ra từ file này.
 > File tồn tại độc lập ở CẢ 2 REPO (`soundwave-backend`, `soundwave-mobile`), đồng bộ tay.
 >
-> Last updated: 2026-07-25 · Contract version tương ứng: `v0.3.0` (BE-004: rate limiting — mã lỗi `RATE_LIMITED` 429)
+> Last updated: 2026-08-16 · Contract version tương ứng: `v0.4.0` (MO-003: History có `played_at`, trần track/playlist)
 >
 > **Cross-cutting (BE-004)**: mọi màn gọi API có thể nhận `429 RATE_LIMITED` (kèm header `Retry-After`) nếu thao tác quá nhanh — đặc biệt **Onboarding/Login** (chống brute-force, per-IP), **Search/Discover** (catalog per-IP), và **Now Playing** log lịch sử (per-user). Client hiển thị "thao tác quá nhanh, thử lại sau" và tôn trọng `Retry-After`.
 
@@ -26,12 +26,20 @@
 | 7 | **Library — Playlists** | Danh sách playlist của user | Tạo playlist mới, tap → Playlist Detail | `GET /me/playlists`, `POST /me/playlists` |
 | 8 | **Playlist Detail** | Track trong playlist, thứ tự | Thêm/xóa track, đổi thứ tự, đổi tên/xóa playlist | `GET /me/playlists/{id}`, `POST/DELETE /me/playlists/{id}/tracks`, `PATCH /me/playlists/{id}` |
 | 9 | **Library — Liked Songs** | Danh sách track đã like | Bỏ thích, tap → Player | `GET /me/liked-tracks`, `POST/DELETE /me/liked-tracks/{track_id}` |
-| 10 | **Library — History** | Lịch sử nghe theo thứ tự mới nhất (cursor) | Tap → Player | `GET /me/history` (ghi bằng `POST /me/history` từ Player) |
+| 10 | **Library — History** | Lịch sử nghe theo thứ tự mới nhất (cursor), **kèm thời điểm nghe** để group "Hôm nay / Hôm qua / Tuần này" | Tap → Player | `GET /me/history` (ghi bằng `POST /me/history` từ Player) |
 | 11 | **Profile/Settings** | Thông tin tài khoản | Đăng xuất, xóa tài khoản | `GET /me`, `DELETE /me` |
 
 > **Ghi chú 2026-08-16 (từ repo mobile)**: màn **History (#10)** trước đây bị thiếu
 > trong bảng dù `GET /me/history` đã có sẵn trong contract `v0.2.0` — bổ sung để khớp
-> scope MO-003. **Không bump contract version** vì không thêm/sửa endpoint nào.
+> scope MO-003.
+>
+> **Nhu cầu màn hình dẫn tới `v0.4.0`** (yêu cầu MO-003, `contract-requests-mo-003.md`):
+> - **History (#10)** cần **thời điểm nghe** để nhóm theo ngày → response đổi từ danh sách
+>   `Track` sang danh sách `HistoryEntry` (`track` + `played_at` + `completed`). Màn này
+>   **hữu hạn** (server chỉ giữ N mục gần nhất/user) nên không dựng infinite scroll vô hạn.
+> - **Playlist Detail (#8)** không phân trang (client cần đủ `track_ids` để reorder) → phải
+>   có **trần số track/playlist** để một playlist khổng lồ không tạo response khổng lồ;
+>   thêm bài khi đã đầy là một trạng thái người dùng thấy được ("Playlist đã đầy").
 
 ## Quyết định đã chốt (ảnh hưởng response schema)
 

@@ -29,6 +29,14 @@ class PlaylistDetailSerializer(PlaylistSerializer):
     tracks = TrackSerializer(many=True)
 
 
+class HistoryEntrySerializer(serializers.Serializer):
+    """A history row: the hydrated track plus when/how it was played (MO-003 R1)."""
+
+    track = TrackSerializer()
+    played_at = serializers.DateTimeField()
+    completed = serializers.BooleanField()
+
+
 class PlaylistCursorPageSerializer(serializers.Serializer):
     items = PlaylistSerializer(many=True)
     next_cursor = serializers.CharField(allow_null=True)
