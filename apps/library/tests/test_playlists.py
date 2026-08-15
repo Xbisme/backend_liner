@@ -72,6 +72,40 @@ def test_duplicate_add_conflicts(client_a: APIClient) -> None:
     assert resp.json()["error"]["code"] == "TRACK_ALREADY_IN_PLAYLIST"
 
 
+def test_add_beyond_cap_conflicts(client_a: APIClient, settings: Any) -> None:
+    """MO-003 R2: detail is un-paginated, so the cap is what bounds the response."""
+    settings.PLAYLIST_MAX_TRACKS = 2
+    pid = _create(client_a)["id"]
+    for tid in ["1", "2"]:
+        assert (
+            client_a.post(
+                f"/me/playlists/{pid}/tracks", {"track_id": tid}, format="json"
+            ).status_code
+            == 204
+        )
+    resp = client_a.post(
+        f"/me/playlists/{pid}/tracks", {"track_id": "3"}, format="json"
+    )
+    assert resp.status_code == 409
+    assert resp.json()["error"]["code"] == "PLAYLIST_FULL"
+
+
+def test_full_playlist_accepts_add_after_removal(
+    client_a: APIClient, settings: Any
+) -> None:
+    """The cap counts current rows — freeing a slot must let the next add through."""
+    settings.PLAYLIST_MAX_TRACKS = 1
+    pid = _create(client_a)["id"]
+    client_a.post(f"/me/playlists/{pid}/tracks", {"track_id": "1"}, format="json")
+    assert client_a.delete(f"/me/playlists/{pid}/tracks/1").status_code == 204
+    assert (
+        client_a.post(
+            f"/me/playlists/{pid}/tracks", {"track_id": "2"}, format="json"
+        ).status_code
+        == 204
+    )
+
+
 def test_remove_track_is_idempotent(client_a: APIClient) -> None:
     pid = _create(client_a)["id"]
     client_a.post(f"/me/playlists/{pid}/tracks", {"track_id": "1"}, format="json")
@@ -115,8 +149,24 @@ def test_rename_and_delete(client_a: APIClient) -> None:
     )
     assert renamed.status_code == 200
     assert renamed.json()["name"] == "New Name"
+    assert set(renamed.json()) == PLAYLIST_FIELDS
     assert client_a.delete(f"/me/playlists/{pid}").status_code == 204
     assert not Playlist.objects.filter(pk=pid).exists()
+
+
+def test_rename_keeps_real_cover_url(client_a: APIClient, jamendo: Any) -> None:
+    """Rename used to hardcode cover_url=None, so clients lost the art on update."""
+    pid = _create(client_a)["id"]
+    client_a.post(f"/me/playlists/{pid}/tracks", {"track_id": "1"}, format="json")
+    _mock_tracks(jamendo, ["1"])
+    listed = client_a.get("/me/playlists").json()["items"][0]
+    assert listed["cover_url"]
+
+    renamed = client_a.patch(
+        f"/me/playlists/{pid}", {"name": "New Name"}, format="json"
+    ).json()
+    assert renamed["cover_url"] == listed["cover_url"]
+    assert renamed["track_count"] == 1
 
 
 def test_list_orders_by_recency(client_a: APIClient, jamendo: Any) -> None:

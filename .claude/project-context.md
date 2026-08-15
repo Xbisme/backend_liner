@@ -19,7 +19,13 @@
 
 - **Trạng thái**: BE-001 → BE-004 **đã merge hết vào `main`**. BE-004 (Security Hardening, PR #4, merge commit `7c6092c`) mang theo rate limiting (per-scope, fail-open/closed), token lifecycle hardening (logout per-session, fail-fast khóa ký JWT), Sentry + scrub, CORS, IDOR sweep, cache load, OWASP review — cross-cutting ở `core/`, **không model/migration mới**, **134 test toàn repo pass**. Contract **v0.3.0** (thêm `RATE_LIMITED` 429). Repo cũng đã có **CI GitHub Actions** (lint/types/tests) + branch protection trên `main`. **Spec kế tiếp: BE-005 (Deploy & Launch)**.
 - **Đã có sẵn**: `docs/screen-inventory.md`, `contracts/openapi.yaml` **v0.3.0**, `.claude/api-context.md` **v0.3.0** (draft, chờ freeze cùng phía mobile), `.specify/memory/constitution.md` v1.0.0, `.claude/dev-workflow.md`, `.claude/changelog.md`, `.claude/decisions/` (ADR 0001-0002), `specs/001-…` → `specs/004-security-hardening/`, `.github/workflows/`.
-- **Spec tiếp theo**: `BE-005-deploy-launch`. **Đang treo (ưu tiên trước BE-005)**: (1) báo mobile MO-002 — catalog thật + album/artist detail đã sẵn sàng, client cần xử lý `429 RATE_LIMITED` + `Retry-After`; (2) copy 3 file contract sang repo mobile (mobile còn ở **v0.2.0**); (3) freeze contract #000.
+- **Đang làm**: `fix/mo-003-contract-requests` — xử lý yêu cầu contract từ mobile
+  (`.claude/contract-requests-mo-003.md`): contract **v0.4.0** (`GET /me/history` trả
+  `HistoryEntry` kèm `played_at` — **breaking**; trần `PLAYLIST_MAX_TRACKS` + mã lỗi
+  `PLAYLIST_FULL`), tài liệu hóa hành vi tombstone/reorder/`Retry-After`, và sửa bug
+  `PATCH /me/playlists/{id}` trả `cover_url` null. 139 test pass.
+- **Spec tiếp theo**: `BE-005-deploy-launch` — spec nháp đã có (`specs/005-deploy-launch/`),
+  **tạm dừng** chờ 3 câu hỏi clarify (nền tảng hosting, chính sách sao lưu, phạm vi staging). **Đang treo (ưu tiên trước BE-005)**: (1) báo mobile MO-002 — catalog thật + album/artist detail đã sẵn sàng, client cần xử lý `429 RATE_LIMITED` + `Retry-After`; (2) copy 3 file contract sang repo mobile (mobile còn ở **v0.2.0**); (3) freeze contract #000.
 - **Đã quyết định**: Jamendo client_id thật (đã cấu hình trong `.env`); cache TTL theo loại (`CACHE_TTL_*` trong settings); genres = danh sách curated trong settings (`CATALOG_GENRES`).
 - **Chưa quyết định**:
   - Google/Apple Sign-In credentials thật cho production (hiện `.env` để placeholder).

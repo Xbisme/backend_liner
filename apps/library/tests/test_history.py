@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from rest_framework.test import APIClient
 
 from apps.library.models import ListeningHistory
@@ -84,7 +85,31 @@ def test_list_orders_by_played_at_desc(
     ListeningHistoryFactory(user=user_a, track_id="3", played_at=now)
     jamendo.respond_tracks([jamendo_track(t) for t in ["1", "2", "3"]])
     items = client_a.get("/me/history").json()["items"]
-    assert [t["id"] for t in items] == ["3", "2", "1"]
+    assert [e["track"]["id"] for e in items] == ["3", "2", "1"]
+
+
+def test_entries_expose_played_at_and_completed(
+    client_a: APIClient, user_a: Any, jamendo: Any
+) -> None:
+    """MO-003 R1: the history screen groups by day, so played_at must reach clients."""
+    played = timezone.now() - timedelta(hours=3)
+    ListeningHistoryFactory(user=user_a, track_id="1", played_at=played, completed=True)
+    jamendo.respond_tracks([jamendo_track("1")])
+    entry = client_a.get("/me/history").json()["items"][0]
+    assert entry["track"]["id"] == "1"
+    assert entry["completed"] is True
+    assert parse_datetime(entry["played_at"]) == played
+
+
+def test_entry_keeps_played_at_for_tombstoned_track(
+    client_a: APIClient, user_a: Any, jamendo: Any
+) -> None:
+    """A dead track still occupies a history row — the timestamp must survive it."""
+    ListeningHistoryFactory(user=user_a, track_id="gone")
+    jamendo.respond_tracks([])
+    entry = client_a.get("/me/history").json()["items"][0]
+    assert entry["track"]["available"] is False
+    assert entry["played_at"] is not None
 
 
 def test_history_is_isolated_per_user(client_a: APIClient, user_b: Any) -> None:

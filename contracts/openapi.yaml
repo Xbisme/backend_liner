@@ -5,7 +5,7 @@ info:
     Backend proxy cho Jamendo (Creative Commons, non-commercial) + tài khoản
     người dùng (playlist, liked tracks, lịch sử nghe). Suy ra từ
     docs/screen-inventory.md.
-  version: "0.3.0"
+  version: "0.4.0"
 
 servers:
   - url: https://api.example.com/v1
@@ -125,12 +125,39 @@ components:
         next_cursor: { type: string, nullable: true }
         has_more: { type: boolean }
 
+    HistoryEntry:
+      type: object
+      required: [track, played_at]
+      properties:
+        track: { $ref: '#/components/schemas/Track' }
+        played_at:
+          type: string
+          format: date-time
+          description: >
+            Thời điểm nghe gần nhất của track này. History là danh sách "nghe gần đây"
+            distinct — mỗi track_id một mục, ghi lại sẽ cập nhật played_at chứ không
+            tạo mục mới. (BE-003 upsert + MO-003)
+        completed: { type: boolean, default: false }
+
+    HistoryCursorPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/HistoryEntry' }
+        next_cursor: { type: string, nullable: true }
+        has_more: { type: boolean }
+
     Playlist:
       type: object
       properties:
         id: { type: integer }
         name: { type: string }
-        track_count: { type: integer }
+        track_count:
+          type: integer
+          description: >
+            Số PlaylistTrack thực tế — ĐÃ bao gồm cả track tombstone
+            (available:false). Tối đa PLAYLIST_MAX_TRACKS (server-side, mặc định 500).
         cover_url:
           type: string
           format: uri
@@ -146,6 +173,12 @@ components:
           properties:
             tracks:
               type: array
+              description: >
+                Toàn bộ track của playlist theo thứ tự (KHÔNG phân trang — client cần
+                đủ danh sách để reorder; trần PLAYLIST_MAX_TRACKS giữ response hữu hạn).
+                Track đã lưu nhưng không còn tra được từ nguồn nhạc vẫn xuất hiện ở
+                ĐÚNG vị trí dưới dạng tombstone (available:false, metadata null) — danh
+                sách không bao giờ bị co lại, nên len(tracks) == track_count. (MO-003)
               items: { $ref: '#/components/schemas/Track' }
 
     User:
@@ -222,7 +255,12 @@ components:
         track_ids:
           type: array
           items: { type: string }
-          description: Toàn bộ danh sách track_id theo thứ tự mới
+          description: >
+            Toàn bộ danh sách track_id theo thứ tự mới. Phải là hoán vị ĐÚNG của tập
+            track hiện có — server so khớp toàn bộ tập và KHÔNG lọc theo `available`,
+            nên payload BẮT BUỘC gồm cả id của track tombstone. Thiếu/thừa/trùng id →
+            400 REORDER_MISMATCH. (Hệ quả UI: màn Playlist Detail không được ẩn
+            tombstone khỏi danh sách kéo-thả.)
 
     LogHistoryRequest:
       type: object
@@ -615,7 +653,10 @@ paths:
         '204':
           description: OK
         '409':
-          description: Track đã có trong playlist
+          description: >
+            TRACK_ALREADY_IN_PLAYLIST — track đã có trong playlist; hoặc
+            PLAYLIST_FULL — playlist đã đạt trần PLAYLIST_MAX_TRACKS (mặc định 500).
+            Client phân biệt bằng `error.code`.
 
   /me/playlists/{id}/tracks/{track_id}:
     delete:
@@ -632,7 +673,9 @@ paths:
           schema: { type: string }
       responses:
         '204':
-          description: OK
+          description: >
+            OK — idempotent: track không có trong playlist cũng trả 204 (no-op).
+            Xóa được cả track tombstone (thao tác chỉ đụng playlist, không tra nguồn nhạc).
 
   /me/playlists/{id}/tracks/reorder:
     patch:
@@ -659,7 +702,11 @@ paths:
 
   /me/history:
     get:
-      summary: Lịch sử nghe — cursor pagination
+      summary: Lịch sử nghe — cursor pagination, mới nhất trước
+      description: >
+        Trả HistoryEntry (track + played_at + completed), sắp theo played_at giảm dần.
+        Server chỉ giữ HISTORY_MAX_ENTRIES mục gần nhất mỗi user (mặc định 100) nên
+        danh sách là hữu hạn.
       security: [{ AppApiKey: [], UserBearer: [] }]
       parameters:
         - $ref: '#/components/parameters/CursorParam'
@@ -669,7 +716,7 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/TrackCursorPage' }
+              schema: { $ref: '#/components/schemas/HistoryCursorPage' }
     post:
       summary: Ghi nhận 1 lượt nghe (gọi khi track kết thúc hoặc user chuyển bài)
       security: [{ AppApiKey: [], UserBearer: [] }]

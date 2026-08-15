@@ -201,6 +201,9 @@ HISTORY_MAX_ENTRIES = env.int("HISTORY_MAX_ENTRIES", default=100)
 LIBRARY_PAGE_SIZE_DEFAULT = env.int("LIBRARY_PAGE_SIZE_DEFAULT", default=20)
 LIBRARY_PAGE_SIZE_MAX = env.int("LIBRARY_PAGE_SIZE_MAX", default=50)
 PLAYLIST_NAME_MAX_LENGTH = env.int("PLAYLIST_NAME_MAX_LENGTH", default=200)
+# Playlist detail is intentionally un-paginated (clients need the full track list to
+# reorder), so a cap is what keeps that response — and the reorder payload — bounded.
+PLAYLIST_MAX_TRACKS = env.int("PLAYLIST_MAX_TRACKS", default=500)
 
 # --- Social providers --------------------------------------------------------
 GOOGLE_OAUTH_CLIENT_ID = env("GOOGLE_OAUTH_CLIENT_ID", default="")

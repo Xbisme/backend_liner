@@ -30,6 +30,7 @@ from apps.library.pagination import (
 from apps.library.serializers import (
     AddTrackSerializer,
     CreatePlaylistSerializer,
+    HistoryEntrySerializer,
     LogHistorySerializer,
     PlaylistDetailSerializer,
     PlaylistSerializer,
@@ -110,14 +111,7 @@ class PlaylistDetailView(WriteThrottleMixin, APIView):
         playlist = playlist_service.rename_playlist(
             playlist, serializer.validated_data["name"]
         )
-        track_count = PlaylistTrack.objects.filter(playlist=playlist).count()
-        return Response(
-            PlaylistSerializer(
-                playlist_service.summary_dict(
-                    playlist, track_count=track_count, cover_url=None
-                )
-            ).data
-        )
+        return Response(PlaylistSerializer(_summary_payload(playlist)).data)
 
     def delete(self, request: Request, playlist_id: int) -> Response:
         playlist = selectors.get_owned_playlist_or_error(_user(request), playlist_id)
@@ -196,9 +190,14 @@ class HistoryView(WriteThrottleMixin, APIView):
         assert page is not None
         track_ids = [row.track_id for row in page]
         liked = selectors.liked_track_ids(_user(request), track_ids)
+        # get_tracks_by_ids preserves the requested order, so rows and tracks pair up.
         tracks = catalog.get_tracks_by_ids(track_ids, liked_ids=liked)
+        entries = [
+            {"track": track, "played_at": row.played_at, "completed": row.completed}
+            for row, track in zip(page, tracks, strict=True)
+        ]
         return paginator.get_paginated_response(
-            list(TrackSerializer(tracks, many=True).data)
+            list(HistoryEntrySerializer(entries, many=True).data)
         )
 
     def post(self, request: Request) -> Response:
@@ -212,6 +211,23 @@ class HistoryView(WriteThrottleMixin, APIView):
             completed=data["completed"],
         )
         return Response(status=status.HTTP_201_CREATED)
+
+
+def _summary_payload(playlist: Playlist) -> dict[str, Any]:
+    """Summary with the real cover — same shape ``GET /me/playlists`` returns.
+
+    Hydrating the first ≤4 tracks is what keeps ``cover_url`` truthful here; a
+    hardcoded ``None`` made rename responses contradict the contract.
+    """
+    track_count = PlaylistTrack.objects.filter(playlist=playlist).count()
+    first_ids = _first_track_ids([playlist.id]).get(playlist.id, [])
+    return playlist_service.summary_dict(
+        playlist,
+        track_count=track_count,
+        cover_url=playlist_service.cover_url_from_tracks(
+            catalog.get_tracks_by_ids(first_ids)
+        ),
+    )
 
 
 def _detail_payload(request: Request, playlist: Playlist) -> dict[str, Any]:

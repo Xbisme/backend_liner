@@ -54,5 +54,5 @@ def test_history_is_user_scoped(
 
     assert client_a.get("/me/history").json()["items"] == []  # A sees none of B's
 
-    b_ids = [t["id"] for t in client_b.get("/me/history").json()["items"]]
+    b_ids = [e["track"]["id"] for e in client_b.get("/me/history").json()["items"]]
     assert b_ids == ["t1"]
